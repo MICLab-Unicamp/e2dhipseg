@@ -14,17 +14,17 @@ Improvements are also still being made privately.
 Thank you!
 
 # Requirements
-python3
-pytorch >= 0.4.0 and torchvision
-matplotlib
-opencv 
-nibabel
-numpy
-tqdm
-scikit-image
-scipy
-pillow
-h5py
+python3\
+pytorch >= 0.4.0 and torchvision\
+matplotlib\
+opencv \
+nibabel\
+numpy\
+tqdm\
+scikit-image\
+scipy\
+pillow\
+h5py\
 
 You can install pytorch following instructions in https://pytorch.org/
 The other requirements can be installed with pip3 or anaconda
