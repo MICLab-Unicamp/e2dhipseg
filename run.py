@@ -7,6 +7,30 @@ import glob
 import subprocess
 from tqdm import tqdm
 import nibabel as nib
+from train import run_once
+from utils import viewnii
+from unet import UNet
+from dunet import get_dunet
+import torch
+from dataset import orientations
+
+def get_models(bias, e2d, res, small, bn, dunet, model_folder=None):
+    '''
+    Navigates through past results folder to load a past result
+    WORKAROUND, DUPLICATED
+    '''
+    models = {}
+
+    for o in orientations:
+        if dunet:
+            model = get_dunet()
+        else:
+            model = UNet(1 + (e2d*2), 1, residual=res, small=small, bias=bias, bn=bn, verbose=False)
+        if model_folder is not None:
+            path = glob.glob(os.path.join(model_folder, "*" + o + ".pt"))[0]
+            model.load_state_dict(torch.load(path))
+        models[o] = model
+    return models
 
 def hippodeep(folder="/home/diedre/git/hippodeep"):
     '''
@@ -21,14 +45,6 @@ def hippodeep(folder="/home/diedre/git/hippodeep"):
         
         shellscript = subprocess.Popen(["sh", "deepseg3.sh", os.path.basename(f)])
         returncode = shellscript.wait()
-
-def fancontrol():
-    try:
-        print("-------------------- Running nfancurve ------------------")
-        shellscript = subprocess.run(["/home/diedre/git/nfancurve/update.sh"])
-        print("-------------------- Done  ------------------")
-    except Exception as e:
-        print("Failed to control GPU fan: {}, continuing.".format(e))
 
 def dcm2niix(folder):
     '''
@@ -61,12 +77,12 @@ if __name__ == "__main__":
                 mask = True
             else:
                 mask = False
-        if arg != "hippodeep":
+        if arg != "hippodeep" and len(argv) >= 3:
             folder = argv[2]
     except:
         print("Please give arg: which subprocess to run and which folder eg. python3 run.py nii2niigz /home/me/data")
     
-    print("Running {} in {}".format(arg, folder))
+    print("Running {}".format(arg))
 
     if arg == "hippodeep":
         print("Due to author limitations, hippodeep must be run with terminal on the hippodeep folder, with the files on the same folder")
@@ -77,9 +93,14 @@ if __name__ == "__main__":
         nii2niigz(folder)
     elif arg == "mni152reg":
         mni152reg(folder, mask=mask)
-    elif arg == "louder":
-        fancontrol()
-            
-    
+    else:
+        print("Running pre-saved weights best model in volume {}".format(arg))
+        if not os.path.isfile(arg):
+            raise OSError("File not found. Make sure the path for your nii input volume {} is correct".format(arg))
+        models = get_models(False, True, True, False, True, False, "weights")
+        vol, mask = run_once(arg, models)
+        print("Done!")
+        if "-nodisplay" not in argv:
+            print("Displaying results, add argument -nodisplay if you dont want to check results.")
+            viewnii(vol, mask=mask)
         
-

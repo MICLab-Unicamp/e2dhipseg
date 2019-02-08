@@ -15,11 +15,10 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import cv2 as cv
-from utils import ESC, imagePrint, myrotate
+from utils import ESC, imagePrint, myrotate, get_device, get_slice, normalizeMri
 from train_results import TrainResults
 #from tqdm import tqdm
-from transforms import ToNumpy, CenterCrop
-from utils import myrotate
+from transforms import ToNumpy, CenterCrop, ToTensor, Compose
 from label import get_largest_components
 from dataset import FloatHippocampusDataset, ADNI, default_adni
 from shutil import copyfile
@@ -238,7 +237,100 @@ def outsider_test(path, name, db, metric):
     print(accs)
     print("path: {}, name: {}, db: {}, metric: {}, Mean: {}".format(path, name, db, str(metric), mean))
     return mean
+
+def run_once(volpath, models):
+    '''
+    Runs our best model in a provided volume and saves mask,
+    In a self contained matter
+    '''
+    print("\nALPHA VERSION: For this version of this code, the provided volume should return slices on the following way for optimal performance:")
+    print("volume[0, :, :] sagital, eyes facing down")
+    print("volume[:, 0, :] coronal")
+    print("volume[:, :, 0] axial, with eyes facing right\n")
+    begin = time.time()
+    save_path = volpath + "_e2dhipmask.nii.gz"
+    device = get_device()
+    orientations = ["sagital", "coronal", "axial"] 
+    CROP_SHAPE = 160
+    slice_transform = Compose([CenterCrop(CROP_SHAPE, CROP_SHAPE), ToTensor()])
     
+    sample_v = normalizeMri(nib.load(volpath).get_fdata().astype(np.float32))
+    shape = sample_v.shape
+    sum_vol_total = torch.zeros(shape)
+
+    for o, model in models.items():
+        model.eval()
+        model.to(device)
+
+    print("Performing segmentation...")
+    for i, o in enumerate(orientations):  
+        try:
+            slice_shape = myrotate(get_slice(sample_v, 0, o), 90).shape
+            for j in range(shape[i]):
+                # E2D
+                ts = np.zeros((3, slice_shape[0], slice_shape[1]), dtype=np.float32)
+                for ii, jj in enumerate(range(j-1, j+2)):
+                    if jj < 0:
+                        jj = 0
+                    elif jj == shape[i]:
+                        jj = shape[i] - 1
+
+                    if i == 0:
+                        ts[ii] = myrotate(sample_v[jj, :, :], 90) 
+                    elif i == 1:
+                        ts[ii] = myrotate(sample_v[:, jj, :], 90)
+                    elif i == 2:
+                        ts[ii] = myrotate(sample_v[:, :, jj], 90)
+                        
+                s, _ = slice_transform(ts, ts[1]) # work around, no mask
+                s = s.to(device)
+                
+                probs = models[o](s.unsqueeze(0))
+                
+                cpup = probs.squeeze().detach().cpu()
+                finalp = torch.from_numpy(myrotate(cpup.numpy(), -90)).float() # back to volume orientation
+
+                # Add to final consensus volume, uses original orientation/shape
+                if i == 0:
+                    toppad = shape[1]//2 - CROP_SHAPE//2
+                    sidepad = shape[2]//2 - CROP_SHAPE//2
+                    
+                    tf = 1 if shape[1]%2 == 1 else 0
+                    sf = 1 if shape[2]%2 == 1 else 0
+                    pad = F.pad(finalp, (sidepad + sf, sidepad, toppad, toppad + tf))/3
+
+                    sum_vol_total[j, :, :] += pad
+                elif i == 1:
+                    toppad = shape[0]//2 - CROP_SHAPE//2
+                    sidepad = shape[2]//2 - CROP_SHAPE//2
+
+                    tf = 1 if shape[0]%2 == 1 else 0
+                    sf = 1 if shape[2]%2 == 1 else 0
+                    pad = F.pad(finalp, (sidepad+ sf, sidepad , toppad, toppad + tf))/3
+
+                    sum_vol_total[:, j, :] += pad
+                elif i == 2:
+                    toppad = shape[0]//2 - CROP_SHAPE//2
+                    sidepad = shape[1]//2 - CROP_SHAPE//2
+
+                    tf = 1 if shape[0]%2 == 1 else 0
+                    sf = 1 if shape[1]%2 == 1 else 0
+                    pad = F.pad(finalp, (sidepad + sf, sidepad, toppad, toppad + tf))/3
+
+                    sum_vol_total[:, :, j] += pad
+                
+        except Exception as e:
+            print("Error: {}, make sure your data is ok, please contact author https://github.com/dscarmo".format(e))
+            traceback.print_exc()
+            quit()
+
+    final_nppred = get_largest_components(sum_vol_total.numpy(), mask_ths=0.5)
+
+    print("Processing took {}s".format(time.time() - begin))
+    print("Saving to {}".format(save_path))
+    nib.save(nib.nifti1.Nifti1Image(final_nppred, None), save_path)
+    return sample_v, final_nppred
+
 def per_volume_test(models, metric, slice_transform, dataset, device, metric_name="Accuracy", display=False, study_ths=False, e2d=False, wait=1, name=""):
     '''
     Test evaluating per volume DICE
@@ -377,7 +469,7 @@ def per_volume_test(models, metric, slice_transform, dataset, device, metric_nam
             volume_accs[o].append(o_acc)
             cons_buffer[i] = o_acc
 
-        if abort: break
+        if abort: quit()
         if skip: continue
 
         # computing consensus accuracy
@@ -396,7 +488,10 @@ def per_volume_test(models, metric, slice_transform, dataset, device, metric_nam
 
         final_nppred = get_largest_components(sum_vol_total.numpy(), mask_ths=0.5)
         final_vol = torch.from_numpy(final_nppred)
-
+        if display:
+            print("displaying final result")
+            from utils import viewnii
+            viewnii(sample_v, mask=final_nppred)
         # mask_compare(sample_v, mask_v, final_nppred) for visual comparison
 
         f_acc = metric(final_vol.cuda(), final_mask.cuda())

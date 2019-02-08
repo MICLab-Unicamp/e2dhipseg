@@ -125,7 +125,7 @@ class UNet(nn.Module):
         print(unet)
         return unet.forward(inpt)
     
-    def __init__(self, n_channels, n_classes, apply_sigmoid=True, residual=False, small=False, bias=False, bn=True):
+    def __init__(self, n_channels, n_classes, apply_sigmoid=True, residual=False, small=False, bias=False, bn=True, verbose=True):
         super(UNet, self).__init__()
         big = not small
         self.inc = inconv(n_channels, 64, residual, bias, bn)
@@ -141,7 +141,7 @@ class UNet(nn.Module):
         self.outc = outconv(64, n_classes, bias)
         self.apply_sigmoid = apply_sigmoid
         self.small = small
-        print("UNet using sigmoid: {} residual connections: {} small: {} number of channels: {} bias: {} batch_norm: {}".format(self.apply_sigmoid, residual, small, n_channels, bias, bn))
+        if verbose: print("UNet using sigmoid: {} residual connections: {} small: {} number of channels: {} bias: {} batch_norm: {}".format(self.apply_sigmoid, residual, small, n_channels, bias, bn))
 
     def forward(self, x):
         '''

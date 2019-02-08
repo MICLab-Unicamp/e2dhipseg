@@ -26,12 +26,9 @@ from train_results import TrainResults
 from transforms import CenterCrop, ToTensor, Compose, CenterCrop, Resize, ToNumpy, ReturnPatch, RandomFlip, Intensity, Noisify, RandomAffine
 import multiprocessing as mp
 from utils import check_name, parse_argv, plots
-from run import fancontrol
-
-fancontrol()
 
 plt.rcParams.update({'font.size': 16})
-    
+
 display_volume, train, volume, db_name, notest, study_ths, wait, finetune = parse_argv(argv)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

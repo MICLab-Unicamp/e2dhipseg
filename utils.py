@@ -27,6 +27,16 @@ REVERSE = 114
 BIG = 98
 VSMALL = 118
 
+def get_slice(vol, i, orientation):
+    if orientation not in orientations:
+        raise ValueError("Unsupported orientation {} should be one of {}".format(orientation, orientations))
+    if orientation == "sagital":
+        return vol[i, :, :]
+    elif orientation == "coronal":
+        return vol[:, i, :]
+    elif orientation == "axial":
+        return vol[:, :, i]
+
 def tag2numpy(shape, file_tag):
     '''
     Interpret tag file segmentation
@@ -87,7 +97,7 @@ def normalizeMri(data):
     cv.normalize(data, img, alpha=1.0, beta=0.0, norm_type=cv.NORM_MINMAX)
     return img
 
-def viewnii(sample, mask=None, id="", wait=1, rotate=90, mrotate=None, quit_on_esc=True, fx=2, fy=2, customshape=None):
+def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_esc=True, fx=2, fy=2, customshape=None):
     '''
     Simple visualization of all orientations of mri
     '''
