@@ -38,3 +38,7 @@ python3 run.py path/to/volume.nii.gz
 It should be able to run if you have all requirements and installed pytorch correctly, in both GPU or CPU.
 
 More instructions in other usages will be available soon.
+
+# Citation
+
+If you use any of this code or our ideas, please cite our arxiv paper (under submission)
