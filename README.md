@@ -1,7 +1,7 @@
 # e2dhipseg
 
 # Introduction
-This contains official implementation for Extended 2D Volumetric Consensus Hippocampus Segmentation
+This contains official implementation for Extended 2D Volumetric Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487)
 
 We made this version of the code public for it to be available for reviewers/chairs with our current MIDL2019 submission: 
 Authors: Diedre Carmo, Bruna Silva, Clarissa Yasuda, Leticia Rittner, Roberto Lotufo
@@ -29,6 +29,10 @@ h5py\
 You can install pytorch following instructions in https://pytorch.org/
 The other requirements can be installed with pip3 or anaconda
 
+# Citation
+
+If you use any of this code or our ideas, please cite our arxiv paper: https://arxiv.org/abs/1902.04487
+
 # Usage
 
 To run in a given volume, do:
@@ -39,6 +43,3 @@ It should be able to run if you have all requirements and installed pytorch corr
 
 More instructions in other usages will be available soon.
 
-# Citation
-
-If you use any of this code or our ideas, please cite our arxiv paper (under submission)
