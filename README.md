@@ -42,6 +42,14 @@ The other requirements can be installed with pip3 or anaconda
 
 If you use any of this code or our ideas, please cite our arxiv paper: https://arxiv.org/abs/1902.04487
 
+BibTex
+@article{carmo2019extended,
+  title={Extended 2D Volumetric Consensus Hippocampus Segmentation},
+  author={Carmo, Diedre and Silva, Bruna and Yasuda, Clarissa and Rittner, Let{\'\i}cia and Lotufo, Roberto},
+  journal={arXiv preprint arXiv:1902.04487},
+  year={2019}
+}
+
 # Usage
 
 To run in a given volume, do:
