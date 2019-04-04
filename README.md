@@ -51,6 +51,10 @@ BibTex
 }
 
 # Usage
+To run in a single volume using a simple graphical interface, do:
+```
+python3 run.py
+```
 
 To run in a given volume, do:
 ```
@@ -78,4 +82,9 @@ ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three argume
 
 Any problems you can create a issue here, and i will have a look!
 
+# Updates
+April 4 2019
+-Added quality of life options, FLIRT registration and back to original space, run on folder, improvements and bug fixes.
 
+Feb 8 2019
+-Initial commit

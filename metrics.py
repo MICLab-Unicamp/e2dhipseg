@@ -21,10 +21,9 @@ def vol_dice(inpt, target, smooth=1.0):
     q = inpt.size(0)
     assert len(inpt) != 0, " trying to compute DICE of nothing"
 
-    iflat = inpt.view(-1) # reshape(nb, -1)
-    tflat = target.view(-1)
-    intersection = (iflat * tflat).sum() # sum(dim=1)
-    
+    iflat = inpt.contiguous().view(-1)
+    tflat = target.contiguous().view(-1)
+    intersection = (iflat * tflat).sum()
     eps = 0
     if smooth == 0.0:
         eps = sys.float_info.epsilon
@@ -51,9 +50,9 @@ def batch_dice(inpt, target, smooth=1.0):
     q = inpt.size(0)
     assert len(inpt) != 0, " trying to compute DICE of nothing"
 
-    iflat = inpt.view(q, -1) # reshape(nb, -1)
-    tflat = target.view(q, -1)
-    intersection = (iflat * tflat).sum(dim=1) # sum(dim=1)
+    iflat = inpt.contiguous().view(q, -1)
+    tflat = target.contiguous().view(q, -1)
+    intersection = (iflat * tflat).sum(dim=1)
     
     eps = 0
     if smooth == 0.0:
@@ -79,7 +78,7 @@ class DICEMetric():
         self.mask_ths = mask_ths
         print("DICE Metric initialized with apply_sigmoid={}".format(apply_sigmoid))
 
-    def __call__(self, probs, target, apply_sigmoid=False, mask_ths=0.5):
+    def __call__(self, probs, target):
         '''
         Returns only DICE metric, as volumetric dice
         probs: output of last convolution, sigmoided or not (use apply_sigmoid=True if not)
@@ -100,10 +99,11 @@ class DICELoss(nn.Module):
     '''
     Calculates DICE Loss
     '''
-    def __init__(self, weight=None, size_average=True, apply_sigmoid=False):
+    def __init__(self, weight=None, size_average=True, apply_sigmoid=False, volumetric=False):
         super(DICELoss, self).__init__()
         self.apply_sigmoid = apply_sigmoid
-        print("DICE Loss initialized with apply_sigmoid={}".format(apply_sigmoid))
+        self.volumetric = volumetric
+        print("DICE Loss initialized with apply_sigmoid={}, volumetric={}".format(apply_sigmoid, self.volumetric))
 
     def forward(self, probs, targets):
         '''
@@ -118,7 +118,10 @@ class DICELoss(nn.Module):
         assert p_max <= 1.0 and p_min >= 0.0, "FATAL ERROR: DICE loss input not bounded! Did you apply sigmoid?"
 
         q = targets.size(0)
-        score = batch_dice(probs, targets)
+        if self.volumetric:
+            score = vol_dice(probs, targets)
+        else:
+            score = batch_dice(probs, targets)
         loss = 1 - score
         return loss
 
@@ -192,6 +195,25 @@ def random_test():
         except KeyboardInterrupt:
             return
 
+def vol_test():
+    '''
+    Specific dice test for the volumetric case
+    '''
+    dice = DICEMetric(apply_sigmoid=False, mask_ths=0.5)
+    from dataset import FloatHippocampusDataset
+    from utils import viewnii
+    from transforms import Compose, CenterCrop, ToTensor, ToNumpy
+    import random
+    db = FloatHippocampusDataset(mode="train", transform=Compose([CenterCrop(160, 160, 160), ToTensor()]), return_volume=True, verbose=False)
+    _, mask = db[10]
+    test_shape = torch.randn_like(mask)
+    test_shape = (test_shape - test_shape.min()) / (test_shape.max() - test_shape.min())
+    #viewnii(mask.squeeze().numpy(), test_shape.squeeze().numpy())
+    print(dice(test_shape, mask))
+    print(dice(mask, mask))
+    print(dice(torch.ones_like(mask), mask))
+    print(dice(torch.zeros_like(mask), mask))
+
 
 if __name__ == "__main__":
     if len(argv) > 1:
@@ -199,6 +221,8 @@ if __name__ == "__main__":
             random_test()
         elif argv[1] == "rect":        
             dice_test(batch_size=1, show=False)
+        elif argv[1] == "volumetric":
+            vol_test()
         else:
             print("Unrecognized arguments {}".format(str(argv)))
     else:

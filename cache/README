@@ -1,0 +1,1 @@
+This folder houses intermediary files created by FLIRT rigid registration. They are all deleted after runtime, and any file found lingering here can be safely deleted.

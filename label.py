@@ -12,7 +12,9 @@ import time
 
 
 def get_largest_components(volume, mask_ths=0.5, ncomponents=2, debug=False):
-    
+    '''
+    Returns 2 or 1 largest components, input should be numpy in cpu
+    '''
     begin = time.time()
     
     volume = volume > mask_ths

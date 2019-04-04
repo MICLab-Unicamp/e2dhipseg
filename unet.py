@@ -12,34 +12,61 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import get_device
 
+
+'''
+Following functions abstract 3d and 2d unet
+if dim == '2d':
+elif dim == '3d':
+'''
+def assert_dim(dim):
+    assert dim in ('2d', '3d'), "dim {} not supported".format(dim)
+
+def conv(in_ch, out_ch, kernel_size, padding, bias, dim='2d'):
+    assert_dim(dim)
+    if dim == '2d': return nn.Conv2d(in_ch, out_ch, kernel_size, padding=padding, bias=bias)
+    elif dim == '3d': return nn.Conv3d(in_ch, out_ch, kernel_size, padding=padding, bias=bias)
+
+def batch_norm(out_ch, dim='2d'):
+    assert_dim(dim)
+    if dim == '2d': return nn.BatchNorm2d(out_ch)
+    elif dim == '3d': return nn.BatchNorm3d(out_ch)
+
+def max_pool(kernel_size, dim='2d'):
+    assert_dim(dim)
+    if dim == '2d': return nn.MaxPool2d(kernel_size)
+    elif dim == '3d': return nn.MaxPool3d(kernel_size)
+
+def conv_transpose(in_ch, out_ch, kernel_size, stride, bias, dim='2d'):
+    assert_dim(dim)
+    if dim == '2d': return nn.ConvTranspose2d(in_ch//2, in_ch//2, kernel_size, stride=stride, bias=bias)
+    elif dim == '3d': return nn.ConvTranspose3d(in_ch//2, in_ch//2, kernel_size, stride=stride, bias=bias)
 
 class double_conv(nn.Module):
     '''
     (conv => BN => ReLU) * 2, one UNET Block
     '''
-    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True):
+    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True, dim='2d'):
         super(double_conv, self).__init__()
         if bn:
             self.conv = nn.Sequential(
-                nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=bias),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=bias),
-                nn.BatchNorm2d(out_ch),
-                nn.ReLU(inplace=True)
+                conv(in_ch, out_ch, 3, 1, bias, dim=dim),
+                batch_norm(out_ch, dim=dim),
+                nn.LeakyReLU(inplace=True),
+                conv(out_ch, out_ch, 3, 1, bias, dim=dim),
+                batch_norm(out_ch, dim=dim),
+                nn.LeakyReLU(inplace=True)
             )
         else:
             self.conv = nn.Sequential(
-                nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=bias),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=bias),
-                nn.ReLU(inplace=True)
+                conv(in_ch, out_ch, 3, 1, bias, dim=dim),
+                nn.LeakyReLU(inplace=True),
+                conv(out_ch, out_ch, 3, 1, bias, dim=dim),
+                nn.LeakyReLU(inplace=True)
             )
         self.residual = residual
         if residual:
-            self.residual_connection = nn.Conv2d(in_ch, out_ch, 1, padding=0, bias=bias)
+            self.residual_connection = conv(in_ch, out_ch, 1, 0, bias, dim=dim)
 
     def forward(self, x):
         y = self.conv(x)
@@ -54,9 +81,9 @@ class inconv(nn.Module):
     '''
     Input convolution
     '''
-    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True):
+    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True, dim='2d'):
         super(inconv, self).__init__()
-        self.conv = double_conv(in_ch, out_ch, residual=residual, bias=bias, bn=bn)
+        self.conv = double_conv(in_ch, out_ch, residual=residual, bias=bias, bn=bn, dim=dim)
 
     def forward(self, x):
         x = self.conv(x)
@@ -67,11 +94,11 @@ class down(nn.Module):
     '''
     Downsample conv
     '''
-    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True):
+    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True, dim='2d'):
         super(down, self).__init__()
         self.mpconv = nn.Sequential(
-            nn.MaxPool2d(2),
-            double_conv(in_ch, out_ch, residual=residual, bias=bias, bn=bn)
+            max_pool(2, dim=dim),
+            double_conv(in_ch, out_ch, residual=residual, bias=bias, bn=bn, dim=dim)
         )
 
     def forward(self, x):
@@ -83,10 +110,10 @@ class up(nn.Module):
     '''
     Upsample conv
     '''
-    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True):
+    def __init__(self, in_ch, out_ch, residual=False, bias=False, bn=True, dim='2d'):
         super(up, self).__init__()
-        self.up = nn.ConvTranspose2d(in_ch//2, in_ch//2, 2, stride=2, bias=bias)
-        self.conv = double_conv(in_ch, out_ch, residual, bias=bias, bn=bn)
+        self.up = conv_transpose(in_ch, in_ch, 2, 2, bias=bias, dim=dim)
+        self.conv = double_conv(in_ch, out_ch, residual, bias=bias, bn=bn, dim=dim)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
@@ -103,9 +130,9 @@ class outconv(nn.Module):
     '''
     Output convolution
     '''
-    def __init__(self, in_ch, out_ch, bias=False):
+    def __init__(self, in_ch, out_ch, bias=False, dim='2d'):
         super(outconv, self).__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch, 1, bias=bias)
+        self.conv = conv(in_ch, out_ch, 1, 0, bias, dim=dim)
 
     def forward(self, x):
         x = self.conv(x)
@@ -117,43 +144,41 @@ class UNet(nn.Module):
     Main model class
     '''
     @staticmethod
-    def forward_test(inpt, n_channels, n_classes, apply_sigmoid, residual, small, bias, bn):
+    def forward_test(inpt, n_channels, n_classes, apply_sigmoid, residual, small, bias, bn, dim='2d'):
         '''
         UNet unit test
         '''
-        unet = UNet(n_channels, n_classes, apply_sigmoid=apply_sigmoid, residual=residual, small=small, bias=bias, bn=bn)
+        unet = UNet(n_channels, n_classes, apply_sigmoid=apply_sigmoid, residual=residual, small=small, bias=bias, bn=bn, dim=dim)
         print(unet)
         return unet.forward(inpt)
     
-    def __init__(self, n_channels, n_classes, apply_sigmoid=True, residual=False, small=False, bias=False, bn=True, verbose=True):
+    def __init__(self, n_channels, n_classes, apply_sigmoid=True, residual=False, small=False, bias=False, bn=True, verbose=True, dim='2d'):
         super(UNet, self).__init__()
         big = not small
-        self.inc = inconv(n_channels, 64, residual, bias, bn)
-        self.down1 = down(64, 128, residual, bias, bn)
-        self.down2 = down(128, 256, residual, bias, bn)
-        self.down3 = down(256, 256+big*256, residual, bias, bn)
+        self.inc = inconv(n_channels, 64, residual, bias, bn, dim=dim)
+        self.down1 = down(64, 128, residual, bias, bn, dim=dim)
+        self.down2 = down(128, 128+big*128, residual, bias, bn, dim=dim)
         if not small:
-            self.down4 = down(512, 512, residual, bias, bn)
-            self.up1 = up(1024, 256, residual, bias, bn)
-        self.up2 = up(512, 128, residual, bias, bn)
-        self.up3 = up(256, 64, residual, bias, bn)
-        self.up4 = up(128, 64, residual, bias, bn)
-        self.outc = outconv(64, n_classes, bias)
+            self.down3 = down(256, 512, residual, bias, bn, dim=dim)
+            self.down4 = down(512, 512, residual, bias, bn, dim=dim)
+            self.up1 = up(1024, 256, residual, bias, bn, dim=dim)
+            self.up2 = up(512, 128, residual, bias, bn, dim=dim)
+        self.up3 = up(256, 64, residual, bias, bn, dim=dim)
+        self.up4 = up(128, 64, residual, bias, bn, dim=dim)
+        self.outc = outconv(64, n_classes, bias, dim=dim)
         self.apply_sigmoid = apply_sigmoid
         self.small = small
-        if verbose: print("UNet using sigmoid: {} residual connections: {} small: {} number of channels: {} bias: {} batch_norm: {}".format(self.apply_sigmoid, residual, small, n_channels, bias, bn))
+        if verbose: print("UNet using sigmoid: {} residual connections: {} small: {} number of channels: {} bias: {} batch_norm: {} dim: {}".format(self.apply_sigmoid, residual, small, n_channels, bias, bn, dim))
 
     def forward(self, x):
         '''
         Saves every downstep output to use in upsteps concatenation
         '''
-        if self.small: # REMOVE LAST DOWN AND FIRST UP
+        if self.small: # REMOVE 2 LAST DOWN AND FIRST UP
             x1 = self.inc(x)
             x2 = self.down1(x1)
             x3 = self.down2(x2)
-            x4 = self.down3(x3)
-            x = self.up2(x4, x3)
-            x = self.up3(x, x2)
+            x = self.up3(x3, x2)
             x = self.up4(x, x1)
             x = self.outc(x)
         else: 
@@ -191,31 +216,58 @@ def init_weights(vgg, model):
                         print(((state_dict[uk] == vgg.state_dict()[vk]).sum()/len(state_dict[uk].view(-1))).item() == 1) # one liner to check if all weights are the same
                         print("-"*20)
                         break
-    return state_dict    
+    return state_dict
 
-def random_unet_test(device):   
-    size = (1, 3, 32, 32)
+def random_unet_test(device, dim='2d'):   
+    from utils import viewnii
+    
+    print("Testing {} UNet".format(dim))
+
+    assert_dim(dim)
+    if dim == '2d':
+        size = (1, 3, 32, 32)
+    elif dim == '3d':
+        size = (1, 1, 32, 32, 32)
     inpt = torch.rand(size, requires_grad=True)
-    plt.subplot(1, 2, 1)
-    plt.title("Random input")
-    plt.imshow(inpt[:, 1].squeeze().detach().numpy(), cmap='gray')
+    
+    if dim == '2d':
+        plt.subplot(1, 2, 1)
+        plt.title("Random input")
+        plt.imshow(inpt[:, 1].squeeze().detach().numpy(), cmap='gray')
+    elif dim == '3d':
+        viewnii(inpt[0, 0].squeeze().detach().numpy())
     
     begin = time.time()
-    outpt = UNet.forward_test(inpt, 3, 1, True, True, False, False, False)
+    if dim == '2d':
+        outpt = UNet.forward_test(inpt, 3, 1, True, True, False, False, True)
+    elif dim == '3d':
+        outpt = UNet.forward_test(inpt, 1, 1, True, False, True, False, False, '3d')
     print("Foward time: " + str(round(time.time() - begin, 3)) + "s")
-    plt.subplot(1, 2, 2)
-    plt.title("UNet output")
-    plt.imshow(outpt.squeeze().detach().numpy(), cmap='gray')
-    print(outpt.shape)
-    plt.show()
+    if dim == '2d':
+        plt.subplot(1, 2, 2)
+        plt.title("UNet output")
+        plt.imshow(outpt.squeeze().detach().numpy(), cmap='gray')
+        print(outpt.shape)
+        plt.show()
+    elif dim == '3d':
+        viewnii(outpt.squeeze().detach().numpy(), wait=0)
 
-    
 def main():
     '''
     Runs if the module is called as a script (python3 unet.py)
     '''
+    from sys import argv
+    from utils import get_device
+
     print("unet module running as script, executing random unet forward test")
-    random_unet_test(get_device())
+    if len(argv) >= 1:
+        if argv[1] == '3d':
+            random_unet_test(get_device(), dim='3d')
+        else:
+            print("{} not understood".format(argv[1]))
+    else:
+        random_unet_test(get_device())
+
 
 if __name__ == "__main__":
     main()

@@ -15,9 +15,8 @@ import multiprocessing as mp
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from nibabel.testing import data_path 
-from skimage.transform import rotate
-from utils import normalizeMri
-from dataset import default_adni
+from utils import normalizeMri, myrotate
+from dataset import default_adni, mni_adni
 
 orientations = ["sagital", "coronal", "axial"]
 folders = ["samples", "masks"]
@@ -98,8 +97,8 @@ def generate_h5py(filename="mni_hip_data_", path=os.path.join("/home", "diedre",
                             ignored_slices += 1
                             continue
 
-                    saveimg = rotate(saveimg, 90, resize=True)
-                    savemask = rotate(savemask, 90, resize=True)
+                    saveimg = myrotate(saveimg, 90)
+                    savemask = myrotate(savemask, 90)
 
                     si = '0'*(3-len(str(i))) + str(i)
 
@@ -141,6 +140,8 @@ if __name__ == "__main__":
         elif arg == "genh5":
             generate_h5py(hiponly=arg2=="hiponly") 
         elif arg == "genadni":
-            generate_h5py(filename="float16_adni_hip_data_", path=default_adni, hiponly=True, adni=True) 
+            generate_h5py(filename="float16_adni_hip_data_", path=default_adni, hiponly=True, adni=True)
+        elif arg == "genmniadni":
+            generate_h5py(filename="float16_mniadni_hip_data_", path=mni_adni, hiponly=True, adni=True)  
         elif arg == "visadni":
             vis_h5py(filename="float16_adni_hip_data_", path=default_adni, hiponly=True)

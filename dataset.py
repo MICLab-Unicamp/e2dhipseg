@@ -16,14 +16,13 @@ import numpy as np
 import cv2 as cv
 import h5py
 import nibabel as nib
-
+import copy
 import torch
 import torch.utils.data as data
 import torchvision
 from transforms import ToTensor, ToFloat32, CenterCrop, Compose, Resize, RandomAffine, Intensity, RandomFlip, Noisify, ReturnPatch
-from skimage.transform import rotate
 from multiprocessing import Lock   
-from utils import normalizeMri, viewnii
+from utils import normalizeMri, viewnii, myrotate
 
 cla_lock = Lock()
 adni_lock = Lock()
@@ -32,6 +31,7 @@ orientations = ["sagital", "coronal", "axial"] # original data orientations
 
 default_datapath = os.path.join("/home","diedre","bigdata","mni_hip_data")
 default_adni = os.path.join("/home","diedre","bigdata","manual_selection_rotated","isometric")
+mni_adni = os.path.join("/home","diedre","bigdata","manual_selection_rotated","raw2mni")
 
 def unit_test(image_dataset=True, adni=True, shuffle=True, ntoshow=30, show=True, plt_show=True, nworkers=0, hiponly=True, volume=False, e2d=False):
     '''
@@ -75,19 +75,18 @@ def display_batch(batch, title):
     plt.axis('off')
     plt.imshow(grid)
 
-def view_volumes(dataset_name="clarissa", wait=0):
+def view_volumes(dataset_name="mnihip", wait=0):
     '''
     View volumes supplied by a dataset abstraction
     '''
-    if dataset_name == "clarissa":
-        fhd = FloatHippocampusDataset(hiponly=False, return_volume=True, orientation="coronal", mode="test")
+    if dataset_name == "mnihip":
+        fhd = FloatHippocampusDataset(return_volume=True, transform=None, orientation="coronal", mode="test", verbose=True)
     elif dataset_name == "cc359":
         fhd = CC359Data()
     elif dataset_name == "adni":
-        #fhd = ADNI()
-        fhd = FloatHippocampusDataset(h5path=default_adni, return_volume=True, mode="test", adni=True, data_split=(0.5, 0.1, 0.4))
-    elif dataset_name == "simone":
-        fhd = Simone()
+        fhd = FloatHippocampusDataset(h5path=default_adni, return_volume=True, mode="test", adni=True, data_split=(0.0, 0.0, 1,0), mnireg=False)
+    elif dataset_name == "mniadni":
+        fhd = FloatHippocampusDataset(h5path=mni_adni, return_volume=True, mode="test", adni=True, data_split=(0.0, 0.0, 1,0), mnireg=True)
     else:
         raise ValueError("Dataset {} not recognized".format(dataset_name))
     
@@ -99,12 +98,17 @@ class ADNI(data.Dataset):
     Abstracts ADNI data
     # Subjects ADNI: 002_S_0295, 002_S_0413, 002_S_0619, 002_S_0685, 002_S_0729, 002_S_0782, 002_S_0938, 002_S_0954, 002_S_0954, 002_S_1018, 002_S_1155, 003_S_0907, 003_S_0981, 005_S_0222, 005_S_0324, 005_S_0448, 005_S_0546, 005_S_0553, 005_S_0572, 005_S_0610, 005_S_0814, 005_S_1341, 006_S_0498, 006_S_0675, 006_S_0681, 006_S_0731, 006_S_1130, 007_S_0041, 007_S_0068, 007_S_0070, 007_S_0101, 007_S_0249, 007_S_0293, 007_S_0316, 007_S_0414, 007_S_0698, 007_S_1206, 007_S_1222, 007_S_1339, 009_S_0751, 009_S_1030, 011_S_0003, 011_S_0005, 011_S_0010, 011_S_0016, 011_S_0021, 011_S_0022, 011_S_0023, 011_S_0053, 011_S_0168
     '''
-    def __init__(self, adnipath=default_adni):
-        self.samples = glob.glob(adnipath + "/samples/*.nii.gz")
-        self.adnipath = adnipath
+    def __init__(self, mnireg=False):
+        if mnireg:
+            print("Using MNI registered ADNI!")
+            self.adnipath = mni_adni
+        else:
+            print("Using isometric ADNI!")
+            self.adnipath = default_adni
+        self.samples = glob.glob(self.adnipath + "/samples/*.nii.gz")
         self.reconstruction_orientations = orientations
         if len(self.samples) == 0:
-            raise ValueError("nii data not found, check if you have data in {}".format(adnipath))
+            raise ValueError("nii data not found, check if you have data in {}".format(self.adnipath))
 
     def __len__(self):
         return len(self.samples)
@@ -113,8 +117,6 @@ class ADNI(data.Dataset):
         '''
         Name should be only id without format (without .nii)
         '''
-        if name == "33":
-            name = "33"
         return self.__getitem__(self.samples.index(add_path(self.adnipath, "samples", name + ".nii.gz")))
 
     def __getitem__(self, i):
@@ -124,7 +126,7 @@ class ADNI(data.Dataset):
         volpath = sample
         hippath = add_path(self.adnipath, "masks", fname)   
 
-        print("Subject {}".format(fname.split('.')[0]))
+        print("Subject {} Volpath: {}".format(fname.split('.')[0], volpath))
         vol = nib.load(volpath).get_fdata()
         hip = nib.load(hippath).get_fdata()
         vs = vol.shape
@@ -139,41 +141,27 @@ class ADNI(data.Dataset):
         return norm_vol, norm_hip
 
 
-class Simone(data.Dataset):
-    '''
-    NOT IMPLEMENTED YET
-    '''
-    def __init__(self):
-        pass
-
-    def __len__(self):
-        pass
-    
-    def __getitem__(self, i):
-        pass
-
-
 class FloatHippocampusDataset(data.Dataset):
     '''
-    Using h5py float data
+    Initializes dataset class
+    h5path: path to h5 file containing all the data, in samples and masks groups containing a dataset for each volume
+    orientation: one of sagital, coronal or axial
+    mode: one of train, validation or test
+    data_split: distribution of data over modes (train, val, test)
+    transform: transforms to apply on slices. transforms should support 2 numpy arrays as input 
+    hiponly: only return slices with hippocampus presence
+    return_volume: return volumes instead of slices
     '''
-    def __init__(self, h5path="/home/diedre/bigdata/mni_hip_data", adni=False, orientation="coronal", mode="train", data_split=(0.8, 0.1, 0.1), transform=None, hiponly=False, return_volume=False, float16=True, e2d=False):
-        '''
-        Initializes dataset class
-        h5path: path to h5 file containing all the data, in samples and masks groups containing a dataset for each volume
-        orientation: one of sagital, coronal or axial
-        mode: one of train, validation or test
-        data_split: distribution of data over modes (train, val, test)
-        transform: transforms to apply on slices. transforms should support 2 numpy arrays as input 
-        hiponly: only return slices with hippocampus presence
-        '''
+    def __init__(self, h5path="/home/diedre/bigdata/mni_hip_data", adni=False, orientation="coronal", mode="train", data_split=(0.8, 0.1, 0.1), transform=None, hiponly=False, return_volume=False, float16=True, e2d=False, verbose=True, mnireg=True):
+        
         orientations = ["sagital", "coronal", "axial"]
         self.reconstruction_orientations = orientations
         modes = ["train", "validation", "test"]
-
+        self.deleted_vols = ["42911", "42912", "42913", "34423"] # volumes removed for some reason
         assert orientation in orientations, "orientation should be one of {}".format(orientations)
         assert mode in modes, "mode should be one of {}".format(modes)
         assert np.sum(np.array(data_split)) == 1.0, "data_split should sum to 1.0"
+        if return_volume: assert orientation == "coronal" and hiponly == False, "orientation should be coronal and hiponly false when returning volumes"
         self.file_lock = adni_lock if adni else cla_lock
         self.float16 = float16
         self.tofloat32 = ToFloat32()
@@ -183,12 +171,13 @@ class FloatHippocampusDataset(data.Dataset):
         self.return_volume = return_volume
         self.e2d = e2d
         self.adni = adni
-        print("FHD slices dataset initialized using {}".format("adni" if adni else "clarissa"))
-        
-        self.volume_shape = (181, 217, 181) # only used for clarissa data
+        self.verbose = verbose
+        print("FHD slices {} dataset initialized using {}, returning volumes? {} MNI registered? {}".format(mode, "adni" if adni else "mnihip", self.return_volume, mnireg))
+    
+        self.volume_shape = (181, 217, 181) # only used for mnihip data
         if adni:
-            self.adni_vols = ADNI()
-            self.fname = os.path.join(h5path, "float16_adni_hip_data_hiponly.hdf5")
+            self.adni_vols = ADNI(mnireg=mnireg)
+            self.fname = os.path.join(h5path, "float16_mniadni_hip_data_hiponly.hdf5" if mnireg else "float16_adni_hip_data_hiponly.hdf5")
         elif hiponly:
             self.fname = os.path.join(h5path, "mni_hip_data_hiponly.hdf5")
         else:
@@ -202,6 +191,15 @@ class FloatHippocampusDataset(data.Dataset):
 
             self.ids = list(samples.keys())
         self.file_lock.release()
+        
+        # Remove slices of deleted volumes
+        it = iter(copy.deepcopy(self.ids))
+        if not adni:
+            for k, i in enumerate(it):
+                vid = i.split("_")[0]
+                if vid in self.deleted_vols:
+                    #if self.verbose: print("Deleting {}".format(i))
+                    self.ids.remove(i)
 
         train_split = int(data_split[0]*len(self.ids))
         val_split = train_split + int(data_split[1]*len(self.ids))
@@ -214,12 +212,12 @@ class FloatHippocampusDataset(data.Dataset):
             self.ids = self.ids[val_split:]
 
         self.volume_ids = []
-        for i in self.ids:
+        for n, i in enumerate(self.ids):
             vid = i.split("_")[0]
-            if vid == "42913":
-                continue
             if vid not in self.volume_ids:
                 self.volume_ids.append(vid)
+        
+        print("Detected volumes: " + str(self.volume_ids))
 
     def __len__(self):
         '''
@@ -247,6 +245,7 @@ class FloatHippocampusDataset(data.Dataset):
                 masks = h5file["masks"]["coronal"]
                 vi = self.volume_ids[index]
                 if self.adni:
+                    if vi == "16": vi = "10"
                     image, target = self.adni_vols.get_by_name(vi)
                 else:
                     image = np.zeros(self.volume_shape, dtype=np.float32)
@@ -257,9 +256,9 @@ class FloatHippocampusDataset(data.Dataset):
                             vi = vid
                         if i.split("_")[0] == vi:
                             # Rotate back to original volume orientation
-                            image[:, j, :], target[:, j, :] = rotate(samples.get(i)[:], -90, resize=True), rotate(masks.get(i)[:], -90, resize=True)
+                            image[:, j, :], target[:, j, :] = myrotate(samples.get(i)[:], -90), myrotate(masks.get(i)[:], -90)
                             j += 1  
-                    print("Subject " + str(vi))  
+                    if self.verbose: print("Subject " + str(vi))  
 
             else: # return slice
                 samples = h5file["samples"][self.orientation]
@@ -328,8 +327,14 @@ class CC359Data(data.Dataset):
         
         return normalized.astype(np.float32), mnormalized.astype(np.float32)
 
-def get_data(data_transforms, db="clarissa", datapath=default_datapath, nworkers=4, e2d=False,
-             batch_size=20, test=False, hiponly=True, return_volume=False, shuffle = {"train": True, "validation": False, "test": False}):
+def get_adni_3d_dataloader(data_transforms, nworkers=4, batch_size=1, data_split=(0, 0, 1), mnireg=True):
+    db = FloatHippocampusDataset(h5path=default_adni, transform=data_transforms, return_volume=True, mode="test", adni=True, data_split=data_split, mnireg=mnireg)
+    print("ADNI volumetric dataloader size: {} MNI? {}".format(len(db), mnireg))
+    return data.DataLoader(db, batch_size=batch_size, shuffle=True, num_workers=nworkers), len(db)
+
+
+def get_data(data_transforms, db="mnihip", datapath=default_datapath, nworkers=4, e2d=False,
+             batch_size=20, test=False, volumetric=False, hiponly=True, return_volume=False, shuffle = {"train": True, "validation": False, "test": False}):
     '''
     Abstracts acquiring dataloaders and data info for other classes
     Constructs dataloaders in all orientations
@@ -348,28 +353,48 @@ def get_data(data_transforms, db="clarissa", datapath=default_datapath, nworkers
     elif db == "concat":
         print("Concatenating adni and Clarissa")
         for o in orientations:
-            hips[o] = {m: data.ConcatDataset([FloatHippocampusDataset(h5path=default_adni, adni=True, data_split=(0.5, 0.1, 0.4), mode=m,  orientation=o, transform=data_transforms[m], hiponly=True, return_volume=False, e2d=e2d), 
+            hips[o] = {m: data.ConcatDataset([FloatHippocampusDataset(h5path=mni_adni, adni=True, data_split=(0.5, 0.1, 0.4), mode=m,  orientation=o, transform=data_transforms[m], hiponly=True, return_volume=False, e2d=e2d, mnireg=True), 
                                               FloatHippocampusDataset(h5path=datapath, mode=m, orientation=o, transform=data_transforms[m], hiponly=True, return_volume=False, e2d=e2d)]) for m in modes}
-    elif db == "clarissa":
-        print("Using clarissa")
+    elif db == "mnihip":
+        print("Using mnihip")
         for o in orientations:
             hips[o] = {m: FloatHippocampusDataset(h5path=datapath, mode=m, orientation=o, transform=data_transforms[m], hiponly=hiponly, return_volume=return_volume, e2d=e2d) for m in modes}
+    elif volumetric:
+        if db == "mnihip3d":
+            hips = {m: FloatHippocampusDataset(h5path=datapath, orientation="coronal", hiponly=False, mode=m, transform=data_transforms[m], return_volume=True, verbose=False) for m in modes}
+        else:
+            raise ValueError("db {} not supported in volumetric mode".format(db))
     else:
         raise ValueError("db {} not supported".format(db))
     
     hip_dataloaders = {}
-    for o in orientations:
-        hip_dataloaders[o] = {m: data.DataLoader(hips[o][m], batch_size=batch_size//int(19*(m=='test') + 1), shuffle=shuffle[m], num_workers=nworkers) for m in modes}
+    
+    if volumetric:
+        bs = {m : batch_size//int((batch_size - 1)*(m=='test') + 1) for m in modes}
+    else: 
+        bs = {m : batch_size//int(19*(m=='test') + 1) for m in modes}
+    print("batch sizes: {}".format(bs))
+    
+    for m in modes:
+        if bs[m] < 1: bs[m] = 1
+    if volumetric:
+        hip_dataloaders = {m: data.DataLoader(hips[m], batch_size=bs[m], shuffle=shuffle[m], num_workers=nworkers) for m in modes}
+    else:
+        for o in orientations:
+            hip_dataloaders[o] = {m: data.DataLoader(hips[o][m], batch_size=bs[m], shuffle=shuffle[m], num_workers=nworkers) for m in modes}
 
     print("dataset_sizes:")   
-    dataset_sizes = {}         
-    for o in orientations:
-        hip_it = iter(hip_dataloaders[o]['train'])  # test iterator
+    if volumetric:
+        dataset_sizes = {m: len(hips[m]) for m in modes}
+    else:    
+        dataset_sizes = {}         
+        for o in orientations:
+            hip_it = iter(hip_dataloaders[o]['train'])  # test iterator
 
-        dataset_sizes[o] = {m: len(hips[o][m]) for m in modes}
+            dataset_sizes[o] = {m: len(hips[o][m]) for m in modes}
 
-        if test:
-            display_batch(next(hip_it), o + " train dataloader")
+            if test:
+                display_batch(next(hip_it), o + " train dataloader")
     print(dataset_sizes)
     if test:
         plt.show() 
@@ -381,7 +406,7 @@ def main():
     Runs if the module is called as a script (eg: python3 dataset.py <dataset_name> <frametime>)
     Executes self tests
     '''
-    dataset_name = argv[1] if len(argv) > 1 else "clarissa"
+    dataset_name = argv[1] if len(argv) > 1 else "mnihip"
     wait = argv[2] if len(argv) > 2 else 10
     print("Dataset module running as script, executing dataset unit test in {}".format(dataset_name))
     
@@ -401,7 +426,7 @@ def main():
             display_batch(batch, o + " concat " + mode + " data")
         plt.show()
     else:
-        view_volumes(dataset_name, wait=10)
+        view_volumes(dataset_name, wait=1)
     print("All tests completed!")
 
 if __name__ == "__main__":            

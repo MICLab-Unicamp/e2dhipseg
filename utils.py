@@ -14,6 +14,9 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 import time
 from skimage.transform import rotate
+from tkinter import Tk
+from tkinter.filedialog import askopenfilename
+from tkinter import messagebox
 
 orientations = ["sagital", "coronal", "axial"]
 
@@ -26,6 +29,38 @@ STOP = 115
 REVERSE = 114
 BIG = 98
 VSMALL = 118
+
+# Simple GUI utils
+def file_dialog():
+    '''
+    Simple GUI to chose files
+    '''
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    filename = askopenfilename() # show an "Open" dialog box and return the path to the selected file
+    if filename: 
+        return filename
+    else: # if empty return None 
+        return None
+
+def alert_dialog(msg, title="E2D HipSeg"):
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    messagebox.showinfo(title, msg)
+
+def error_dialog(msg, title="E2D HipSeg"):
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    messagebox.showerror(title, msg)
+
+def confirm_dialog(msg, title='E2D HipSeg'):
+    '''
+    Simple confirmation dialog
+    '''
+    Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
+    MsgBox = messagebox.askquestion(title, msg)
+    if MsgBox == 'yes':
+        return True
+    else:
+        return False
+#
 
 def get_slice(vol, i, orientation):
     if orientation not in orientations:
@@ -97,10 +132,13 @@ def normalizeMri(data):
     cv.normalize(data, img, alpha=1.0, beta=0.0, norm_type=cv.NORM_MINMAX)
     return img
 
-def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_esc=True, fx=2, fy=2, customshape=None):
+def viewnii(sample, mask=None, ref=None, id="", wait=1, rotate=90, mrotate=None, quit_on_esc=True, fx=2, fy=2, customshape=None):
     '''
     Simple visualization of all orientations of mri
     '''
+    print("Sample Shape: {} Max: {} Min: {}".format(sample.shape, sample.max(), sample.min()))
+    if mask is not None: 
+        print("Mask Shape: {} Max: {} Min: {}".format(mask.shape, mask.max(), mask.min()))
     if customshape is None:
         shape = sample.shape
     else:
@@ -108,6 +146,10 @@ def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_
 
     if mrotate is None:
         mrotate = rotate
+    else:
+        print("Rotating mask by {}".format(mrotate))
+    print("Rotating by {} for view".format(rotate))
+    
     kup = True
     for j in range(0,3):
         #for k in range(0, shape[j]):
@@ -115,20 +157,47 @@ def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_
         while k >= 0 and k < shape[j]:
             if j == 0:
                 view = myrotate(sample[k,:,:], rotate)
-                if mask is not None:
-                    mview = myrotate(mask[k,:,:], mrotate)
+                if mask is not None: mview = myrotate(mask[k,:,:], mrotate)
+                if ref is not None: rview = myrotate(ref[k,:,:], mrotate)
             elif j == 1:
                 view = myrotate(sample[:,k,:], rotate)
-                if mask is not None:
-                    mview = myrotate(mask[:,k,:], mrotate)
+                if mask is not None: mview = myrotate(mask[:,k,:], mrotate)
+                if ref is not None: rview = myrotate(ref[:,k,:], mrotate)
             elif j == 2:
                 view = myrotate(sample[:,:,k], rotate)
-                if mask is not None:
-                    mview = myrotate(mask[:,:,k], mrotate)
+                if mask is not None: mview = myrotate(mask[:,:,k], mrotate)
+                if ref is not None: rview = myrotate(ref[:,:,k], mrotate)
 
             view = cv.resize(view, (0,0), fx=fx, fy=fy)
             imagePrint(view, orientations[j] + " vol " + str(wait) + "ms", scale=0.8)
-            if mask is not None: 
+            if ref is not None:
+                mview = cv.resize(mview, (0,0), fx=fx, fy=fy)
+                rview = cv.resize(rview, (0,0), fx=fx, fy=fy)
+                
+                view = view.astype(np.float32)
+                mview = mview.astype(np.float32)
+                rview = rview.astype(np.float32)
+
+                view = cv.cvtColor(view, cv.COLOR_GRAY2BGR)
+                mview = cv.cvtColor(mview, cv.COLOR_GRAY2BGR)
+                rview = cv.cvtColor(rview, cv.COLOR_GRAY2BGR)
+
+                # green our mask (bGr)
+                mview[:, :, 0] = 0 
+                mview[:, :, 2] = 0 
+                # blue reference (Bgr)
+                rview[:, :, 1] = 0 
+                rview[:, :, 2] = 0 
+
+                mask_sum = mview + rview
+                sum_view = view + mask_sum
+
+                imagePrint(mask_sum, orientations[j] + " mask ", scale=0.8)
+                imagePrint(sum_view, orientations[j] + " overlap ", scale=0.8)
+
+                final_view = np.hstack([view, mask_sum, sum_view])
+
+            elif mask is not None: 
                 mview = cv.resize(mview, (0,0), fx=fx, fy=fy)
                 try:
                     sum_view = view + mview
@@ -144,6 +213,7 @@ def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_
                 final_view = view
             cv.imshow(id, final_view)
 
+            # User interaction
             key = cv.waitKey(wait)
             if key == ESC:
                 if quit_on_esc:
@@ -180,12 +250,11 @@ def viewnii(sample, mask=None, id="", wait=10, rotate=90, mrotate=None, quit_on_
             else:
                 k -= 1
             
-
-def myrotate(inpt, d):
+def myrotate(inpt, d, order=0):
     '''
-    Simplifies rotation calls
+    Simplifies rotation calls for 2D images
     '''
-    return rotate(inpt, d, resize=True)
+    return rotate(inpt, d, resize=True, order=order)
 
 def check_name(word, basename, char='-'):
     '''
@@ -285,12 +354,12 @@ def parse_argv(argv):
     display_volume = False
     train = True
     volume = False
-    db_name = "clarissa"
+    db_name = "mnihip"
     notest = False
     study_ths = False
     wait = 1
 
-    valid_dbs = ["clarissa", "adni", "cc359", "concat"]
+    valid_dbs = ["mnihip", "adni", "mniadni", "cc359", "concat"]
 
     if len(argv) > 1:
         if "notrain" in argv:
