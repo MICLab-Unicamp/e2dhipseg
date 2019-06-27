@@ -83,6 +83,9 @@ ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three argume
 Any problems you can create a issue here, and i will have a look!
 
 # Updates
+Expected December 2020
+-Incoming final version of the method
+
 April 4 2019
 -Added quality of life options, FLIRT registration and back to original space, run on folder, improvements and bug fixes.
 
