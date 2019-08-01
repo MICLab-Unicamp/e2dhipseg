@@ -1,11 +1,11 @@
 # e2dhipseg
 
 # Introduction
-This contains official implementation for Extended 2D Volumetric Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487)
+This contains official implementation for Extended 2D Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487)
 
 We made this version of the code public for the following pre-print: 
 Authors: Diedre Carmo, Bruna Silva, Clarissa Yasuda, Leticia Rittner, Roberto Lotufo
-Title: Extended 2D Volumetric Consensus Hippocampus Segmentation
+Title: Extended 2D Consensus Hippocampus Segmentation
 
 We are implementing many quality of life changes actively, updates for this repository will be regular.
 Improvements are also still being made privately.
