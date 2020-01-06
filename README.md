@@ -2,7 +2,7 @@
 
 # Introduction
 This contains official implementation for Extended 2D Consensus Hippocampus Segmentation 
-Pre-print: (https://arxiv.org/abs/1902.04487)
+Pre-print: (https://arxiv.org/abs/1902.04487) and an
 Extended Abstract published at the International Conference on edical Imaging with Deep Learning
 
 We made this version of the code public for the following publication: 
@@ -92,14 +92,14 @@ Press S to stop in a slice, R to revert direction, press up or down (numpad or d
 
 ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three arguments work in any combination. It should be able to run if you have all requirements and installed pytorch correctly, in both GPU or CPU.
 
-Any problems you can create a issue here, and i will have a look!
+We highly recommend that you use the -reg option, making sure your FLIRT installation is working. If you dont use -reg, make sure your volume is in the MNI152 head orientation, or you might get wrong/empty results. Any problems you can create a issue here, and i will have a look!
 
 # Updates
-Expected December 2020
+Expected March 2020
 -Incoming final version of the method
 
 October 10 2019
--Updated weights
+-Updated weights for better performance
 
 April 4 2019
 -Added quality of life options, FLIRT registration and back to original space, run on folder, improvements and bug fixes.
