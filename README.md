@@ -1,4 +1,4 @@
-# E2DConsHipseg
+# e2dhipseg
 
 # Introduction
 This contains official implementation for Extended 2D Consensus Hippocampus Segmentation 
