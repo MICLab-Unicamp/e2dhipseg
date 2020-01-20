@@ -1,17 +1,18 @@
 # e2dhipseg
 
 # Introduction
-This contains official implementation for Extended 2D Consensus Hippocampus Segmentation 
-Pre-print: (https://arxiv.org/abs/1902.04487) and an
-Extended Abstract published at the International Conference on edical Imaging with Deep Learning
+This contains official implementation for the papers:
 
-We made this version of the code public for the following publication: 
+Journal pre-print:\
+Hippocampus Segmentation on Epilepsy and Alzheimer’s Disease Studies with Multiple Convolutional Neural Networks (https://arxiv.org/pdf/2001.05058.pdf)
+
+Extended Abstract:\
+Extended 2D Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487) published at the International Conference on edical Imaging with Deep Learning, 2019
+
 Authors: Diedre Carmo, Bruna Silva, Clarissa Yasuda, Leticia Rittner, Roberto Lotufo
-Title: Extended 2D Consensus Hippocampus Segmentation
-In: International Conference on edical Imaging with Deep Learning, 2019
 
 We are implementing many quality of life changes actively, updates for this repository will be regular.
-Improvements are also still being made privately.
+Improvements are still being made privately, and will be made public when the corresponding paper is published.
 
 Thank you!
 
@@ -43,24 +44,28 @@ The other requirements can be installed with pip3 or anaconda
 
 # Citation
 
-If you use any of this code or our ideas, please cite our arxiv paper: https://arxiv.org/abs/1902.04487 or our Extended Abstract: 
+If you use any of this code or our ideas, please cite one of these publications:
 
-BibTex
+BibTex\
 Preprint:
-@article{carmo2019extended,
-  title={Extended 2D Volumetric Consensus Hippocampus Segmentation},
-  author={Carmo, Diedre and Silva, Bruna and Yasuda, Clarissa and Rittner, Let{\'\i}cia and Lotufo, Roberto},
-  journal={arXiv preprint arXiv:1902.04487},
-  year={2019}
-}
 
-Extended Abstract:
+Journal Preprint:\
+@misc{carmo2020hippocampus,
+    title={Hippocampus Segmentation on Epilepsy and Alzheimer's Disease Studies with Multiple Convolutional Neural Networks},
+    author={Diedre Carmo and Bruna Silva and Clarissa Yasuda and Letícia Rittner and Roberto Lotufo},
+    year={2020},
+    eprint={2001.05058},
+    archivePrefix={arXiv},
+    primaryClass={eess.IV}
+}\
+
+Extended Abstract:\
 @inproceedings{carmo2019midl,
   title={Extended 2D Volumetric Consensus Hippocampus Segmentation},
   author={Carmo, Diedre and Silva, Bruna and Yasuda, Clarissa and Rittner, Let{\'\i}cia and Lotufo, Roberto},
   booktitle={International Conference on Medical Imaging with Deep Learning},
   year={2019}
-}
+}\
 
 # Usage
 To run in a single volume using a simple graphical interface, do:
