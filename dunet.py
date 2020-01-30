@@ -9,6 +9,7 @@ from torch.autograd import Variable
 import numpy as np
 from torchvision import models as modelzoo
 
+
 def get_sfs_idxs(sfs, last=True):
     """
     Return the saved feature indexes that will be concatenated
@@ -19,8 +20,10 @@ def get_sfs_idxs(sfs, last=True):
     if last:
         feature_szs = [sfs_feats.features.size()[-1] for sfs_feats in sfs]
         sfs_idxs = list(np.where(np.array(feature_szs[:-1]) != np.array(feature_szs[1:]))[0])
-        if feature_szs[0] != feature_szs[1]: sfs_idxs = [0] + sfs_idxs
-    else: sfs_idxs = list(range(len(sfs)))
+        if feature_szs[0] != feature_szs[1]:
+            sfs_idxs = [0] + sfs_idxs
+    else:
+        sfs_idxs = list(range(len(sfs)))
     return sfs_idxs
 
 
@@ -32,10 +35,10 @@ def conv_bn_relu(in_c, out_c, kernel_size, stride, padding):
 
 
 class UnetBlock(nn.Module):
-    #TODO: ADAPT KERNEL SIZE, STRIDE AND PADDING SO THAT ANY SIZE DECAY WILL BE SUPPORTED
+    # TODO: ADAPT KERNEL SIZE, STRIDE AND PADDING SO THAT ANY SIZE DECAY WILL BE SUPPORTED
     def __init__(self, up_in_c, x_in_c):
         super().__init__()
-        self.upconv = nn.ConvTranspose2d(up_in_c, up_in_c // 2, 2, 2) # H, W -> 2H, 2W
+        self.upconv = nn.ConvTranspose2d(up_in_c, up_in_c // 2, 2, 2)  # H, W -> 2H, 2W
         self.conv1 = nn.Conv2d(x_in_c + up_in_c // 2, (x_in_c + up_in_c // 2) // 2, 3, 1, 1)
         self.conv2 = nn.Conv2d((x_in_c + up_in_c // 2) // 2, (x_in_c + up_in_c // 2) // 2, 3, 1, 1)
         self.bn = nn.BatchNorm2d((x_in_c + up_in_c // 2) // 2)
@@ -47,9 +50,10 @@ class UnetBlock(nn.Module):
         x = F.relu(self.conv2(x))
         return self.bn(x)
 
+
 class SaveFeatures():
     """ Extract pretrained activations"""
-    features=None
+    features = None
     def __init__(self, m): self.hook = m.register_forward_hook(self.hook_fn)
     def hook_fn(self, module, input, output): self.features = output
     def remove(self): self.hook.remove()
@@ -130,6 +134,7 @@ class DynamicUnet(nn.Module):
         out = out.sigmoid()
         return out
 
+
 def get_dunet():
     '''
     Returns a DynamicUnet with Resnet34 as encoder
@@ -139,9 +144,9 @@ def get_dunet():
     rnet_clip = nn.Sequential(rnet.conv1, rnet.bn1, rnet.relu, rnet.layer1, rnet.layer2, rnet.layer3, rnet.layer4)
     dunet = DynamicUnet(rnet_clip, n_classes=1)
     estimuli = torch.ones(1, 3, 32, 32)
-    out = dunet(estimuli.cpu())
+    dunet(estimuli.cpu())
     return dunet
-    
+
 
 if __name__ == "__main__":
     print("Testing dynamic unet")
@@ -151,17 +156,17 @@ if __name__ == "__main__":
     rnet = modelzoo.resnet34(pretrained=True)
     rnet_clip = nn.Sequential(rnet.conv1, rnet.bn1, rnet.relu, rnet.layer1, rnet.layer2, rnet.layer3, rnet.layer4)
     dunet = DynamicUnet(rnet_clip, n_classes=1)
-    inp = torch.ones(1, 3, 32, 32) #initial stimuli? thats weird
+    inp = torch.ones(1, 3, 32, 32)  # initial stimuli? thats weird
     out = dunet(inp.cpu())
     dunet.cuda()
     test_input = torch.randn((10, 3, 32, 32)).cuda()
     gout = dunet(test_input).cpu()
     print(gout.shape)
-    
+
     i = test_input.cpu().numpy()[0].transpose(1, 2, 0)
     o = gout.cpu().detach().numpy()[0].transpose(1, 2, 0)
-    
+
     cv.imshow("i", i)
     cv.imshow("o", o)
-    #print(dunet)
+    # print(dunet)
     cv.waitKey(1000)

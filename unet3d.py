@@ -9,8 +9,9 @@ Based off: https://github.com/pykao/Modified-3D-UNet-Pytorch/blob/master/model.p
 import torch.nn as nn
 import torch
 
+
 class Modified3DUNet(nn.Module):
-    def __init__(self, in_channels, n_classes, base_n_filter = 8):
+    def __init__(self, in_channels, n_classes, base_n_filter=8):
         super(Modified3DUNet, self).__init__()
         print("Modified3DUNet with {} in_channels and {} output class".format(in_channels, n_classes))
         self.in_channels = in_channels
@@ -19,7 +20,7 @@ class Modified3DUNet(nn.Module):
 
         self.lrelu = nn.LeakyReLU()
         self.dropout3d = nn.Dropout3d(p=0.6)
-        #self.upsacle = nn.Upsample(scale_factor=2, mode='nearest')
+        # self.upsacle = nn.Upsample(scale_factor=2, mode='nearest')
         self.upsacle = nn.functional.interpolate
         self.softmax = nn.Softmax(dim=1)
 
@@ -47,25 +48,29 @@ class Modified3DUNet(nn.Module):
         # Level 5 context pathway, level 0 localization pathway
         self.conv3d_c5 = nn.Conv3d(self.base_n_filter*8, self.base_n_filter*16, kernel_size=3, stride=2, padding=1, bias=False)
         self.norm_lrelu_conv_c5 = self.norm_lrelu_conv(self.base_n_filter*16, self.base_n_filter*16)
-        self.norm_lrelu_upscale_conv_norm_lrelu_l0 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*16, self.base_n_filter*8)
+        self.norm_lrelu_upscale_conv_norm_lrelu_l0 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*16,
+                                                                                             self.base_n_filter*8)
 
-        self.conv3d_l0 = nn.Conv3d(self.base_n_filter*8, self.base_n_filter*8, kernel_size = 1, stride=1, padding=0, bias=False)
+        self.conv3d_l0 = nn.Conv3d(self.base_n_filter*8, self.base_n_filter*8, kernel_size=1, stride=1, padding=0, bias=False)
         self.inorm3d_l0 = nn.InstanceNorm3d(self.base_n_filter*8)
 
         # Level 1 localization pathway
         self.conv_norm_lrelu_l1 = self.conv_norm_lrelu(self.base_n_filter*16, self.base_n_filter*16)
         self.conv3d_l1 = nn.Conv3d(self.base_n_filter*16, self.base_n_filter*8, kernel_size=1, stride=1, padding=0, bias=False)
-        self.norm_lrelu_upscale_conv_norm_lrelu_l1 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*8, self.base_n_filter*4)
+        self.norm_lrelu_upscale_conv_norm_lrelu_l1 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*8,
+                                                                                             self.base_n_filter*4)
 
         # Level 2 localization pathway
         self.conv_norm_lrelu_l2 = self.conv_norm_lrelu(self.base_n_filter*8, self.base_n_filter*8)
         self.conv3d_l2 = nn.Conv3d(self.base_n_filter*8, self.base_n_filter*4, kernel_size=1, stride=1, padding=0, bias=False)
-        self.norm_lrelu_upscale_conv_norm_lrelu_l2 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*4, self.base_n_filter*2)
+        self.norm_lrelu_upscale_conv_norm_lrelu_l2 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*4,
+                                                                                             self.base_n_filter*2)
 
         # Level 3 localization pathway
         self.conv_norm_lrelu_l3 = self.conv_norm_lrelu(self.base_n_filter*4, self.base_n_filter*4)
         self.conv3d_l3 = nn.Conv3d(self.base_n_filter*4, self.base_n_filter*2, kernel_size=1, stride=1, padding=0, bias=False)
-        self.norm_lrelu_upscale_conv_norm_lrelu_l3 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*2, self.base_n_filter)
+        self.norm_lrelu_upscale_conv_norm_lrelu_l3 = self.norm_lrelu_upscale_conv_norm_lrelu(self.base_n_filter*2,
+                                                                                             self.base_n_filter)
 
         # Level 4 localization pathway
         self.conv_norm_lrelu_l4 = self.conv_norm_lrelu(self.base_n_filter*2, self.base_n_filter*2)
@@ -73,9 +78,6 @@ class Modified3DUNet(nn.Module):
 
         self.ds2_1x1_conv3d = nn.Conv3d(self.base_n_filter*8, self.n_classes, kernel_size=1, stride=1, padding=0, bias=False)
         self.ds3_1x1_conv3d = nn.Conv3d(self.base_n_filter*4, self.n_classes, kernel_size=1, stride=1, padding=0, bias=False)
-
-
-
 
     def conv_norm_lrelu(self, feat_in, feat_out):
         return nn.Sequential(
@@ -98,7 +100,7 @@ class Modified3DUNet(nn.Module):
         return nn.Sequential(
             nn.InstanceNorm3d(feat_in),
             nn.LeakyReLU(),
-            #nn.Upsample(scale_factor=2, mode='nearest'),
+            # nn.Upsample(scale_factor=2, mode='nearest'),
             nn.ConvTranspose3d(feat_in, feat_in, 2, stride=2, bias=False),
             # should be feat_in*2 or feat_in
             nn.Conv3d(feat_in, feat_out, kernel_size=3, stride=1, padding=1, bias=False),
@@ -198,20 +200,21 @@ class Modified3DUNet(nn.Module):
 
         out = out_pred + ds1_ds2_sum_upscale_ds3_sum_upscale
         seg_layer = out
-        
-        #out = out.permute(0, 2, 3, 4, 1).contiguous().view(-1, self.n_classes)
-        ##out = out.view(-1, self.n_classes)
-        #out = self.softmax(out)
-        #return out, seg_layer
+
+        # out = out.permute(0, 2, 3, 4, 1).contiguous().view(-1, self.n_classes)
+        # out = out.view(-1, self.n_classes)
+        # out = self.softmax(out)
+        # return out, seg_layer
         return seg_layer.sigmoid()
+
 
 if __name__ == "__main__":
     '''
     Tests this 3D unet in many situations
     '''
-    from utils import get_device, viewnii, normalizeMri
+    from utils import get_device, viewnii
     from metrics import DICEMetric, DICELoss
-    
+
     device = get_device()
     unet3d = Modified3DUNet(1, 1).to(device)
     test_shape = (20, 1, 32, 32, 32)
@@ -219,7 +222,7 @@ if __name__ == "__main__":
     ones = torch.ones(test_shape)
 
     test_input = torch.randn(test_shape)
-    
+
     target = ones
 
     probs = unet3d(test_input.to(device))
@@ -228,11 +231,11 @@ if __name__ == "__main__":
     dicem = DICEMetric(apply_sigmoid=False)
     dicel = DICELoss(apply_sigmoid=False, volumetric=True)
     m = dicem(probs, ones.to(device))
-    l = dicel(probs, ones.to(device))
-    print("metric: {} loss: {}".format(m, l))
+    loss = dicel(probs, ones.to(device))
+    print("metric: {} loss: {}".format(m, loss))
 
     viewnii(probs.detach().cpu().squeeze().numpy()[0], target.cpu().squeeze().numpy()[0], wait=0, fx=2, fy=2)
-    
+
     test = torch.randn((1, 1, 160, 160, 160))
     seg_layer = unet3d(test.to(device))
     print(seg_layer.shape)

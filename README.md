@@ -1,4 +1,4 @@
-# e2dhipseg
+# Extended 2D Consensus Hippocampus Segmentation (e2dhipseg) - beta
 
 # Introduction
 This contains official implementation for the papers:
@@ -6,13 +6,18 @@ This contains official implementation for the papers:
 Journal pre-print:\
 Hippocampus Segmentation on Epilepsy and Alzheimer’s Disease Studies with Multiple Convolutional Neural Networks (https://arxiv.org/pdf/2001.05058.pdf)
 
-Extended Abstract:\
+Short Paper:\
 Extended 2D Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487) published at the International Conference on edical Imaging with Deep Learning, 2019
 
 Authors: Diedre Carmo, Bruna Silva, Clarissa Yasuda, Leticia Rittner, Roberto Lotufo
 
-We are implementing many quality of life changes actively, updates for this repository will be regular.
+Please note the code may be confusing in some places due to containing backwards compatibility to many experiments, and being my
+personal Deep Learning in medical imaging code repository.
+
 Improvements are still being made privately, and will be made public when the corresponding paper is published.
+Please cite one of our papers if you use code from this repository!
+
+This is a beta release, any problem please create an issue and i will try to help you!
 
 Thank you!
 
@@ -24,6 +29,8 @@ Having a GPU is not necessary, but will speed prediction time per volume dramati
 
 
 # Software Requirements
+To run this code, you need the following libraries installed:
+
 python3\
 pytorch >= 0.4.0 and torchvision\
 matplotlib\
@@ -35,12 +42,15 @@ scikit-image\
 scipy\
 pillow\
 h5py\
-FLIRT (optional if you want to pre-register volumes)\
+FLIRT - optional if you want to use the automated volume registration, please do use it if your volumes are not in the MNI152
+orientation, or you will get blank/wrong outputs\
 
 You can install pytorch following the guide in in https://pytorch.org/. If you plan to use a GPU, you should have the correct CUDA and CuDNN for your pytorch installation.
 
 FLIRT can be installed following https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation/Linux
-The other requirements can be installed with pip3 or anaconda
+The other requirements can be installed with pip3
+
+To use the standalone binary release, no enviroment setup should be necessary besides FLIRT.
 
 # Citation
 
@@ -59,7 +69,7 @@ Journal Preprint:\
     primaryClass={eess.IV}
 }\
 
-Extended Abstract:\
+Short Paper:\
 @inproceedings{carmo2019midl,
   title={Extended 2D Volumetric Consensus Hippocampus Segmentation},
   author={Carmo, Diedre and Silva, Bruna and Yasuda, Clarissa and Rittner, Let{\'\i}cia and Lotufo, Roberto},
@@ -67,7 +77,17 @@ Extended Abstract:\
   year={2019}
 }\
 
+# Binary Release (alpha)
+To make this easier to use, a standalone binary compilation of the code is available at:
+
+Binary release v0.1.a: https://drive.google.com/file/d/112nKUpn0sQurn1Whj2FDzFDg8HnhKJgX/view?usp=sharing
+
+Download, unpack the .zip file and run the "run" file. You don't need to use "sudo". No setup of enviroment should be needed,
+only the installation of FLIRT if you use the registration option. This is in an alpha release, if you find any problem,
+please create an issue.
+
 # Usage
+If you are using the binary release version, replace "python3 run.py" with "./run.py".\
 To run in a single volume using a simple graphical interface, do:
 ```
 python3 run.py
@@ -102,6 +122,9 @@ We highly recommend that you use the -reg option, making sure your FLIRT install
 # Updates
 Expected March 2020
 -Incoming final version of the method
+
+-January 2020
+-Added compiled executable link, updated to journal pre-print version
 
 October 10 2019
 -Updated weights for better performance
