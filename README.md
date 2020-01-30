@@ -29,7 +29,9 @@ Having a GPU is not necessary, but will speed prediction time per volume dramati
 
 
 # Software Requirements
-To run this code, you need the following libraries installed:
+If you are using the binary release, no enviroment setup should be necessary besides FLIRT, if used.
+
+To run this code, you need to have the following libraries installed:
 
 python3\
 pytorch >= 0.4.0 and torchvision\
@@ -50,7 +52,6 @@ You can install pytorch following the guide in in https://pytorch.org/. If you p
 FLIRT can be installed following https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation/Linux
 The other requirements can be installed with pip3
 
-To use the standalone binary release, no enviroment setup should be necessary besides FLIRT.
 
 # Citation
 
@@ -87,7 +88,7 @@ only the installation of FLIRT if you use the registration option. This is in an
 please create an issue.
 
 # Usage
-If you are using the binary release version, replace "python3 run.py" with "./run.py".\
+If you are using the binary release version, replace ```python3 run.py``` with ```./run.py```.\
 To run in a single volume using a simple graphical interface, do:
 ```
 python3 run.py
