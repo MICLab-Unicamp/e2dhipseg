@@ -121,8 +121,8 @@ ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three argume
 We highly recommend that you use the -reg option, making sure your FLIRT installation is working. If you dont use -reg, make sure your volume is in the MNI152 head orientation, or you might get wrong/empty results. Any problems you can create a issue here, and i will have a look!
 
 # Updates
-Expected March 2020
--Incoming final version of the method
+Expected June 2020
+-Incoming final version of the method, delayed by the current world situation.
 
 -January 2020
 -Added compiled executable link, updated to journal pre-print version
