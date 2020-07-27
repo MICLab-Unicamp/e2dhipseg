@@ -47,9 +47,12 @@ h5py\
 FLIRT - optional if you want to use the automated volume registration, please do use it if your volumes are not in the MNI152
 orientation, or you will get blank/wrong outputs\
 
-You can install pytorch following the guide in in https://pytorch.org/. If you plan to use a GPU, you should have the correct CUDA and CuDNN for your pytorch installation.
+You can install pytorch following the guide in in https://pytorch.org/. If you plan to use a GPU, you should have the correct CUDA and CuDNN for your pytorch installation. 
+For CPU only installation on Windows use the following commands:
+- pip install torch==1.3.0+cpu -f https:&#8203;//download.pytorch.org/whl/torch_stable.html
+- pip install torchvision==0.4.0+cpu -f https:&#8203;//download.pytorch.org/whl/torch_stable.html
 
-FLIRT can be installed following https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation/Linux
+FLIRT can be installed following https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation/Linux (for Windows executables are aleady included)
 The other requirements can be installed with pip3
 
 
