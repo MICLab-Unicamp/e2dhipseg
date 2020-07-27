@@ -1,7 +1,10 @@
 # Extended 2D Consensus Hippocampus Segmentation (e2dhipseg) - beta
 
 # Introduction
-This contains official implementation for the papers:
+The masters dissertation related to this work has been published:
+Deep Learning for Hippocampus Segmentation (http://repositorio.unicamp.br/handle/REPOSIP/345970)
+
+This repository is also the official implementation for the papers:
 
 Journal pre-print:\
 Hippocampus Segmentation on Epilepsy and Alzheimer’s Disease Studies with Multiple Convolutional Neural Networks (https://arxiv.org/pdf/2001.05058.pdf)
