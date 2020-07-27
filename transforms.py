@@ -26,9 +26,9 @@ from utils import myrotate, normalizeMri, get_slice, get_device, error_dialog, c
 from label import get_largest_components
 from scipy.ndimage import rotate as rotate3d
 
-MNI_BUFFER_VOL_PATH = 'cache/mnibuffer.nii.gz'
-MNI_BUFFER_MASK_PATH = 'cache/mnimaskbuffer.nii.gz'
-MNI_BUFFER_MATRIX_PATH = 'cache/mnibuffer.mat'
+MNI_BUFFER_VOL_PATH = os.path.normpath('cache/mnibuffer.nii.gz')
+MNI_BUFFER_MASK_PATH = os.path.normpath('cache/mnimaskbuffer.nii.gz')
+MNI_BUFFER_MATRIX_PATH = os.path.normpath('cache/mnibuffer.mat')
 
 
 class Compose(object):
@@ -881,9 +881,13 @@ def mni152reg(invol, mask=None, ref_brain="/usr/local/fsl/data/standard/MNI152li
     matrix_buffer = MNI_BUFFER_MATRIX_PATH
     matrix_buffer = reg_worker.add_worker_id(matrix_buffer)
 
+    my_env = os.environ.copy(); my_env["FSLOUTPUTTYPE"] = "NIFTI_GZ" # set FSLOUTPUTTYPE=NIFTI_GZ
+    if not os.path.isfile(ref_brain): ref_brain="templates/MNI152lin_T1_1mm.nii.gz" #if FSL template not found use local copy
+    ref_brain = os.path.normpath(ref_brain) # use OS specific filename    
+    
     try:
         ret = None
-        subprocess.run(["flirt", "-in",  invol, "-ref", ref_brain, "-out", save_path, "-omat", matrix_buffer])
+        subprocess.run(["flirt", "-in",  invol, "-ref", ref_brain, "-out", save_path, "-omat", matrix_buffer], env=my_env)
         if return_numpy:
             vol = nib.load(save_path).get_fdata()
 
@@ -891,7 +895,7 @@ def mni152reg(invol, mask=None, ref_brain="/usr/local/fsl/data/standard/MNI152li
             ret = vol
         else:
             subprocess.run(["flirt", "-in",  mask, "-ref", ref_brain, "-out", mask_save_path, "-init", matrix_buffer,
-                            "-applyxfm"])
+                            "-applyxfm"], env=my_env)
             if return_numpy:
                 mask = nib.load(mask_save_path).get_fdata()
                 ret = (vol, mask)

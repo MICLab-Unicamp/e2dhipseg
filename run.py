@@ -23,11 +23,11 @@ from transforms import run_once, mni152reg, MNI_BUFFER_MATRIX_PATH, REGWorker
 from get_models import get_models
 from multiprocessing import Queue, Process, cpu_count
 
-PRE_REGISTER_VOL_PATH = 'cache/pre_register_vol.nii.gz'
-PRE_REGISTER_MASK_PATH = 'cache/pre_register_mask.nii.gz'
+PRE_REGISTER_VOL_PATH = os.path.normpath('cache/pre_register_vol.nii.gz')
+PRE_REGISTER_MASK_PATH = os.path.normpath('cache/pre_register_mask.nii.gz')
 
-INVERSE_MATRIX_PATH = 'cache/invmnibuffer.mat'
-TEMP_MASK_PATH = 'cache/mask.nii.gz'
+INVERSE_MATRIX_PATH = os.path.normpath('cache/invmnibuffer.mat')
+TEMP_MASK_PATH = os.path.normpath('cache/mask.nii.gz')
 MASKS_FOLDER = "e2dhipseg_masks"
 
 
@@ -159,12 +159,13 @@ def invert_matrix(hip_path, ref_path, saved_matrix):
     Returns path of final result
     '''
     print("Inverting matrix... {}".format(hip_path))
-    subprocess.run(["convert_xfm", "-omat",  INVERSE_MATRIX_PATH, "-inverse", saved_matrix])
+    my_env = os.environ.copy(); my_env["FSLOUTPUTTYPE"] = "NIFTI_GZ" # set FSLOUTPUTTYPE=NIFTI_GZ
+    subprocess.run(["convert_xfm", "-omat",  INVERSE_MATRIX_PATH, "-inverse", saved_matrix], env=my_env)
     print("Transforming back to original space...")
     subprocess.run(["flirt", "-in",  hip_path, "-ref", ref_path, "-out", "final_buffer.nii.gz", "-init", INVERSE_MATRIX_PATH,
-                    "-applyxfm"])
+                    "-applyxfm"], env=my_env)
 
-    save_path = ref_path + "_voxelcount-{}_e2dhipmask.nii.gz".format(int(nib.load("final_buffer.nii.gz").get_fdata().sum()))
+    save_path = os.path.normpath(ref_path + "_voxelcount-{}_e2dhipmask.nii.gz".format(int(nib.load("final_buffer.nii.gz").get_fdata().sum())))
 
     try:
         shutil.move("final_buffer.nii.gz", save_path)
