@@ -19,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+
+The files "Flirt.exe", "convert_xfm.exe" and "MNI152lin_T1_1mm.nii.gz" as
+parts of the FMRIB Software Library are subject to the FSL license which can
+be found at: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/Licence
+
+The file "cygwin1.dll" as part of the Cygwin projet is subject to the 
+GPL license as outlined at: https://cygwin.com/licensing.html

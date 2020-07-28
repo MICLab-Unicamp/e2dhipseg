@@ -50,7 +50,9 @@ orientation, or you will get blank/wrong outputs\
 You can install pytorch following the guide in in https://pytorch.org/. If you plan to use a GPU, you should have the correct CUDA and CuDNN for your pytorch installation. 
 For CPU only installation on Windows use the following commands:
 - pip install torch==1.3.0+cpu -f https:&#8203;//download.pytorch.org/whl/torch_stable.html
-- pip install torchvision==0.4.0+cpu -f https:&#8203;//download.pytorch.org/whl/torch_stable.html
+- pip install torchvision==0.2.2.post3
+A Windows standalone executable can be compiled with:
+- pyinstaller e2dhipse_windows.spec
 
 FLIRT can be installed following https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/FslInstallation/Linux (for Windows executables are aleady included)
 The other requirements can be installed with pip3
