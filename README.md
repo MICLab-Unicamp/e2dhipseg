@@ -81,14 +81,8 @@ Short Paper:\
   year={2019}
 }\
 
-# Binary Release (alpha)
-To make this easier to use, a standalone binary compilation of the code is available at:
-
-Binary release v0.1.a: https://drive.google.com/file/d/112nKUpn0sQurn1Whj2FDzFDg8HnhKJgX/view?usp=sharing
-
-Download, unpack the .zip file and run the "run" file. You don't need to use "sudo". No setup of enviroment should be needed,
-only the installation of FLIRT if you use the registration option. This is in an alpha release, if you find any problem,
-please create an issue.
+# Binary Release
+To make this easier to use, a standalone binary compilation of the code is available as a [release](https://github.com/MICLab-Unicamp/e2dhipseg/releases).
 
 # Usage
 If you are using the binary release version, replace ```python3 run.py``` with ```./run.py```.\
