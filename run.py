@@ -4,6 +4,7 @@ Module with functions to run subprocesses and manage files
 Also point of entry to run over external data
 '''
 from sys import argv
+import sys
 import traceback
 import time
 from datetime import date
@@ -23,13 +24,15 @@ from transforms import run_once, mni152reg, MNI_BUFFER_MATRIX_PATH, REGWorker
 from get_models import get_models
 from multiprocessing import Queue, Process, cpu_count
 
-PRE_REGISTER_VOL_PATH = 'cache/pre_register_vol.nii.gz'
-PRE_REGISTER_MASK_PATH = 'cache/pre_register_mask.nii.gz'
+PRE_REGISTER_VOL_PATH = os.path.normpath('cache/pre_register_vol.nii.gz')
+PRE_REGISTER_MASK_PATH = os.path.normpath('cache/pre_register_mask.nii.gz')
 
-INVERSE_MATRIX_PATH = 'cache/invmnibuffer.mat'
-TEMP_MASK_PATH = 'cache/mask.nii.gz'
+INVERSE_MATRIX_PATH = os.path.normpath('cache/invmnibuffer.mat')
+TEMP_MASK_PATH = os.path.normpath('cache/mask.nii.gz')
 MASKS_FOLDER = "e2dhipseg_masks"
 
+if not os.path.isdir('cache'): os.mkdir('cache')
+if not os.path.isdir(MASKS_FOLDER): os.mkdir(MASKS_FOLDER) 
 
 def generate_stds():
     '''
@@ -158,13 +161,27 @@ def invert_matrix(hip_path, ref_path, saved_matrix):
     Inverts the FSL matrix and returns hip to original state
     Returns path of final result
     '''
+    
+    if sys.platform == "win32":
+        try: # when running frozen with pyInstaller
+            flirt_executable = sys._MEIPASS+'\\flirt.exe' 
+            convert_xfm_executable = sys._MEIPASS+'\\convert_xfm.exe' 
+        except: # when running normally 
+            flirt_executable = 'flirt.exe' 
+            convert_xfm_executable = 'convert_xfm.exe'              
+    else: 
+        flirt_executable = 'flirt'   
+        convert_xfm_executable = 'convert_xfm'        
+    
+    
     print("Inverting matrix... {}".format(hip_path))
-    subprocess.run(["convert_xfm", "-omat",  INVERSE_MATRIX_PATH, "-inverse", saved_matrix])
+    my_env = os.environ.copy(); my_env["FSLOUTPUTTYPE"] = "NIFTI_GZ" # set FSLOUTPUTTYPE=NIFTI_GZ
+    subprocess.run([convert_xfm_executable, "-omat",  INVERSE_MATRIX_PATH, "-inverse", saved_matrix], env=my_env)
     print("Transforming back to original space...")
-    subprocess.run(["flirt", "-in",  hip_path, "-ref", ref_path, "-out", "final_buffer.nii.gz", "-init", INVERSE_MATRIX_PATH,
-                    "-applyxfm"])
+    subprocess.run([flirt_executable, "-in",  hip_path, "-ref", ref_path, "-out", "final_buffer.nii.gz", "-init", INVERSE_MATRIX_PATH,
+                    "-applyxfm"], env=my_env)
 
-    save_path = ref_path + "_voxelcount-{}_e2dhipmask.nii.gz".format(int(nib.load("final_buffer.nii.gz").get_fdata().sum()))
+    save_path = os.path.normpath(ref_path + "_voxelcount-{}_e2dhipmask.nii.gz".format(int(nib.load("final_buffer.nii.gz").get_fdata().sum())))
 
     try:
         shutil.move("final_buffer.nii.gz", save_path)
@@ -422,8 +439,13 @@ if __name__ == "__main__":
 
             reg = "-reg" in argv
             print("Running pre-saved weights best model in {}".format(arg))
-
-        models = get_models(False, True, True, False, True, False, dim='2d', model_folder="weights", verbose=False,
+            
+        if sys.platform == "win32":    
+           try: weights_path = sys._MEIPASS+'\\weights' # when running frozen with pyInstaller
+           except: weights_path = 'weights'            # when running normally
+        else: weights_path = 'weights'
+        
+        models = get_models(False, True, True, False, True, False, dim='2d', model_folder=weights_path, verbose=False,
                             out_channels=2, apply_sigmoid=False, apply_softmax=True)
 
         if batch_mode:

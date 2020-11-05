@@ -5,6 +5,7 @@ To ensure compatibility input should be always numpy
 Author: Diedre Carmo
 https://github.com/dscarmo
 '''
+import sys
 import time
 import os
 import torch
@@ -26,9 +27,9 @@ from utils import myrotate, normalizeMri, get_slice, get_device, error_dialog, c
 from label import get_largest_components
 from scipy.ndimage import rotate as rotate3d
 
-MNI_BUFFER_VOL_PATH = 'cache/mnibuffer.nii.gz'
-MNI_BUFFER_MASK_PATH = 'cache/mnimaskbuffer.nii.gz'
-MNI_BUFFER_MATRIX_PATH = 'cache/mnibuffer.mat'
+MNI_BUFFER_VOL_PATH = os.path.normpath('cache/mnibuffer.nii.gz')
+MNI_BUFFER_MASK_PATH = os.path.normpath('cache/mnimaskbuffer.nii.gz')
+MNI_BUFFER_MATRIX_PATH = os.path.normpath('cache/mnibuffer.mat')
 
 
 class Compose(object):
@@ -881,17 +882,30 @@ def mni152reg(invol, mask=None, ref_brain="/usr/local/fsl/data/standard/MNI152li
     matrix_buffer = MNI_BUFFER_MATRIX_PATH
     matrix_buffer = reg_worker.add_worker_id(matrix_buffer)
 
+    my_env = os.environ.copy(); my_env["FSLOUTPUTTYPE"] = "NIFTI_GZ" # set FSLOUTPUTTYPE=NIFTI_GZ
+    if not os.path.isfile(ref_brain): #if FSL template not found use local copy
+        if sys.platform == "win32":
+           try: ref_brain = sys._MEIPASS+'\\templates\\MNI152lin_T1_1mm.nii.gz' # when running frozen with pyInstaller
+           except: ref_brain = 'templates\\MNI152lin_T1_1mm.nii.gz'            # when running normally 
+        else: ref_brain = 'templates/MNI152lin_T1_1mm.nii.gz'            
+    ref_brain = os.path.normpath(ref_brain) # use OS specific filename    
+    
+    if sys.platform == "win32":
+        try: flirt_executable = sys._MEIPASS+'\\flirt.exe' # when running frozen with pyInstaller
+        except: flirt_executable = 'flirt.exe'            # when running normally 
+    else: flirt_executable = 'flirt'    
+    
     try:
         ret = None
-        subprocess.run(["flirt", "-in",  invol, "-ref", ref_brain, "-out", save_path, "-omat", matrix_buffer])
+        subprocess.run([flirt_executable, "-in",  invol, "-ref", ref_brain, "-out", save_path, "-omat", matrix_buffer], env=my_env)
         if return_numpy:
             vol = nib.load(save_path).get_fdata()
 
         if mask is None and return_numpy:
             ret = vol
         else:
-            subprocess.run(["flirt", "-in",  mask, "-ref", ref_brain, "-out", mask_save_path, "-init", matrix_buffer,
-                            "-applyxfm"])
+            subprocess.run([flirt_executable, "-in",  mask, "-ref", ref_brain, "-out", mask_save_path, "-init", matrix_buffer,
+                            "-applyxfm"], env=my_env)
             if return_numpy:
                 mask = nib.load(mask_save_path).get_fdata()
                 ret = (vol, mask)
@@ -908,7 +922,7 @@ def mni152reg(invol, mask=None, ref_brain="/usr/local/fsl/data/standard/MNI152li
     except FileNotFoundError as fnfe:
         error_dialog("FLIRT registration error or FLIRT installation not found. Make sure FLIRT is installed for your OS.")
         print("Registration ERROR: {}".format(fnfe))
-        quit()
+        sys.exit(1)
 
     return ret
 
