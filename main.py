@@ -185,8 +185,7 @@ if __name__ == "__main__":
                                                                       display=cmd_args["display_volume"],
                                                                       e2d=args["e2d"], wait=cmd_args["wait"], name=experiment,
                                                                       study_ths=cmd_args["study_ths"], ce_output=args["ce"],
-                                                                      classify=args["classify"], rot=cmd_args["rot"],
-                                                                      do_orientation_detection=cmd_args["dod"])
+                                                                      classify=args["classify"], rot=cmd_args["rot"])
             fold_means.append(vol_result)
             results[experiment] = vol_result
             plots(ths_study, cons, cmd_args["study_ths"], opt=cmd_args["db_name"], savepath=model_folder, mean_result=vol_result,
