@@ -27,7 +27,6 @@ from label import get_largest_components
 from dataset import FloatHippocampusDataset, ADNI, default_adni, mni_adni, default_harp, HARP_CLASSES
 from dataset import orientations as default_orientations
 from radam import RAdam
-from orientation_detector import OrientationDetector
 from nathip import NatHIP
 from metrics import EvalMetricCalculator
 
@@ -482,7 +481,7 @@ def pad_and_consensus(oshape, croped_slice, sum_volume, orientation, slice_posit
 
 
 def per_volume_test(models, metric, slice_transform, dataset, device, metric_name="Accuracy", display=False, study_ths=False,
-                    e2d=False, wait=1, name="", ce_output=False, classify=False, do_orientation_detection=False, rot=False):
+                    e2d=False, wait=1, name="", ce_output=False, classify=False, rot=False):
     '''
     Test evaluating per volume DICE
     '''
@@ -490,10 +489,6 @@ def per_volume_test(models, metric, slice_transform, dataset, device, metric_nam
     for o, model in models.items():
         model.eval()
         model.to(device)
-
-    if do_orientation_detection:
-        print("Initializing orientation detector...")
-        orientation_detector = OrientationDetector(device, do_transform=True)
 
     metricer = EvalMetricCalculator(metric)
     volume_accs = {}
@@ -527,13 +522,8 @@ def per_volume_test(models, metric, slice_transform, dataset, device, metric_nam
         sum_vol_total = torch.zeros(shape)
         # print("Volume shape: {}".format(shape))
 
-        if do_orientation_detection:
-            print("Detecting orientation...")
-            orientations = orientation_detector(sample_v)
-            print("Detected {}.".format(orientations))
-        else:
-            orientations = default_orientations
-            print("Assuming volume is in {}".format(orientations))
+        orientations = default_orientations
+        print("Assuming volume is in {}".format(orientations))
 
         for i, o in enumerate(orientations):
             if display:
