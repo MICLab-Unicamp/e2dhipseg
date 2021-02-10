@@ -1,26 +1,17 @@
 # Extended 2D Consensus Hippocampus Segmentation (e2dhipseg) - beta
 
 # Introduction
-The masters dissertation related to this work has been published:
+This work implements the segmentation method proposed in the paper Hippocampus segmentation on epilepsy and Alzheimer's disease studies with multiple convolutional neural networks published in Heliyon, Volume 7, Issue 2, 2021
+(https://www.sciencedirect.com/science/article/pii/S2405844021003315)
+
+A masters dissertation related to this work has been published:
 Deep Learning for Hippocampus Segmentation (http://repositorio.unicamp.br/handle/REPOSIP/345970)
 
-This repository is also the official implementation for the papers:
-
-Journal pre-print:\
-Hippocampus Segmentation on Epilepsy and Alzheimer’s Disease Studies with Multiple Convolutional Neural Networks (https://arxiv.org/pdf/2001.05058.pdf)
-
-Short Paper:\
-Extended 2D Consensus Hippocampus Segmentation (https://arxiv.org/abs/1902.04487) published at the International Conference on edical Imaging with Deep Learning, 2019
+This repository is also the official implementation for the short paper Extended 2D Consensus Hippocampus Segmentation presented at the International Conference on Medical Imaging with Deep Learning (MIDL), 2019
 
 Authors: Diedre Carmo, Bruna Silva, Clarissa Yasuda, Leticia Rittner, Roberto Lotufo
 
-Please note the code may be confusing in some places due to containing backwards compatibility to many experiments, and being my
-personal Deep Learning in medical imaging code repository.
-
-Improvements are still being made privately, and will be made public when the corresponding paper is published.
-Please cite one of our papers if you use code from this repository!
-
-This is a beta release, any problem please create an issue and i will try to help you!
+This code is mainly intended to be used for others to be able to run this in a given MRI dataset or file. Notice we published a standalone release with a minimal GUI for ease of prediction. Any problem please create an issue and i will try to help you.
 
 Thank you!
 
@@ -69,23 +60,22 @@ If you use any of this code or our ideas, please cite one of these publications:
 BibTex\
 Preprint:
 
-Journal Preprint:\
-@misc{carmo2020hippocampus,
-    title={Hippocampus Segmentation on Epilepsy and Alzheimer's Disease Studies with Multiple Convolutional Neural Networks},
-    author={Diedre Carmo and Bruna Silva and Clarissa Yasuda and Letícia Rittner and Roberto Lotufo},
-    year={2020},
-    eprint={2001.05058},
-    archivePrefix={arXiv},
-    primaryClass={eess.IV}
-}\
+Journal Publication:
 
-Short Paper:\
-@inproceedings{carmo2019midl,
-  title={Extended 2D Volumetric Consensus Hippocampus Segmentation},
-  author={Carmo, Diedre and Silva, Bruna and Yasuda, Clarissa and Rittner, Let{\'\i}cia and Lotufo, Roberto},
-  booktitle={International Conference on Medical Imaging with Deep Learning},
-  year={2019}
-}\
+    @article{CARMO2021e06226,
+    title = {Hippocampus segmentation on epilepsy and Alzheimer's disease studies with multiple convolutional neural networks},
+    journal = {Heliyon},
+    volume = {7},
+    number = {2},
+    pages = {e06226},
+    year = {2021},
+    issn = {2405-8440},
+    doi = {https://doi.org/10.1016/j.heliyon.2021.e06226},
+    url = {https://www.sciencedirect.com/science/article/pii/S2405844021003315},
+    author = {Diedre Carmo and Bruna Silva and Clarissa Yasuda and Letícia Rittner and Roberto Lotufo},
+    keywords = {Deep learning, Hippocampus segmentation, Convolutional neural networks, Alzheimer's disease, Epilepsy},
+    abstract = {Background: Hippocampus segmentation on magnetic resonance imaging is of key importance for the diagnosis, treatment decision and investigation of neuropsychiatric disorders. Automatic segmentation is an active research field, with many recent models using deep learning. Most current state-of-the art hippocampus segmentation methods train their methods on healthy or Alzheimer's disease patients from public datasets. This raises the question whether these methods are capable of recognizing the hippocampus on a different domain, that of epilepsy patients with hippocampus resection. New Method: In this paper we present a state-of-the-art, open source, ready-to-use, deep learning based hippocampus segmentation method. It uses an extended 2D multi-orientation approach, with automatic pre-processing and orientation alignment. The methodology was developed and validated using HarP, a public Alzheimer's disease hippocampus segmentation dataset. Results and Comparisons: We test this methodology alongside other recent deep learning methods, in two domains: The HarP test set and an in-house epilepsy dataset, containing hippocampus resections, named HCUnicamp. We show that our method, while trained only in HarP, surpasses others from the literature in both the HarP test set and HCUnicamp in Dice. Additionally, Results from training and testing in HCUnicamp volumes are also reported separately, alongside comparisons between training and testing in epilepsy and Alzheimer's data and vice versa. Conclusion: Although current state-of-the-art methods, including our own, achieve upwards of 0.9 Dice in HarP, all tested methods, including our own, produced false positives in HCUnicamp resection regions, showing that there is still room for improvement for hippocampus segmentation methods when resection is involved.}
+    }
 
 # Binary Release
 To make this easier to use, a standalone binary compilation of the code is available as a [release](https://github.com/MICLab-Unicamp/e2dhipseg/releases).
@@ -123,18 +113,3 @@ ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three argume
 
 We highly recommend that you use the -reg option, making sure your FLIRT installation is working. If you dont use -reg, make sure your volume is in the MNI152 head orientation, or you might get wrong/empty results. Any problems you can create a issue here, and i will have a look!
 
-# Updates
-Expected June 2020
--Incoming final version of the method, delayed by the current world situation.
-
--January 2020
--Added compiled executable link, updated to journal pre-print version
-
-October 10 2019
--Updated weights for better performance
-
-April 4 2019
--Added quality of life options, FLIRT registration and back to original space, run on folder, improvements and bug fixes.
-
-Feb 8 2019
--Initial commit
