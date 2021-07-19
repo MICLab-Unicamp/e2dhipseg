@@ -113,3 +113,5 @@ ARGUMENTS SHOULD COME AFTER THE INPUT PATH, as in the examples. All three argume
 
 We highly recommend that you use the -reg option, making sure your FLIRT installation is working. If you dont use -reg, make sure your volume is in the MNI152 head orientation, or you might get wrong/empty results. Any problems you can create a issue here, and i will have a look!
 
+Finally, if you are performing evaluations using results from our method, make sure you are using binary masks and predictions. Our predictions can be binarized by applying a 0.5 threshold. 
+
